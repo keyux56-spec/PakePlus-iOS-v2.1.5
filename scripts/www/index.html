@@ -1,88 +1,451 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" href="./static/css/styles.css" />
-        <meta
-            http-equiv="Content-Security-Policy"
-            content="default-src * 'unsafe-inline' 'unsafe-eval'"
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Tauri App</title>
-        <script src="./static/js/main.js"></script>
-    </head>
-    <body>
-        <main class="container">
-            <h1>Welcome to TauriMan</h1>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>惠德综合高中 - 校园生活</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="./Bmob-2.7.0.min.js"></script>
+    <script src="./config.js"></script>
+    <script src="./banned_words.js"></script>
+    <style>
+        :root {
+            --bg-body: #F5F6F8;
+            --text-dark: #121212;
+            --text-gray: #888;
+      
+            --g-love: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%);
+            --g-job: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+            --g-study: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            --g-game: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --g-trade: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); 
+            --g-lost: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%);
+           
+            --g-contact: linear-gradient(135deg, #FF9966 0%, #FF5E62 100%);
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background-color: var(--bg-body); 
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Heiti SC", sans-serif; 
+            color: var(--text-dark); 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding-bottom: 60px; 
+        }
 
-            <div class="row">
-                <a
-                    href="https://tauri.app"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <img
-                        src="./assets/tauri.svg"
-                        class="logo tauri"
-                        alt="Tauri logo"
-                    />
-                </a>
-                <a
-                    href="https://pakeplus.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <img
-                        src="https://hk.gh-proxy.org/https://github.com/Sjj1024/PakePlus/blob/main/app-icon.png"
-                        class="logo vanilla"
-                        alt="JavaScript logo"
-                    />
-                </a>
+        
+        .header {
+            padding: 20px 24px 10px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: #fff; position: sticky; top: 0; z-index: 99;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+        .header-text h1 { font-size: 24px; font-weight: 800; color: #333; letter-spacing: -0.5px; margin-bottom: 4px; }
+        .header-text p { font-size: 13px; color: #999; font-weight: 500; }
+
+        .user-avatar { 
+            width: 48px; height: 48px; 
+            border-radius: 16px; background: #f0f0f0; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 20px; color: #bbb;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer; border: 2px solid #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .user-avatar:active { transform: scale(0.9); }
+        .user-avatar.logged-in { background: #333; color: #fff; border: 2px solid #333; }
+
+        
+        .banner-wrap { padding: 20px 24px; }
+        .banner-box { 
+            width: 100%; aspect-ratio: 2.2/1; 
+            border-radius: 24px; overflow: hidden; position: relative; 
+            box-shadow: 0 15px 30px rgba(0,0,0,0.08); transform: translateZ(0); 
+        }
+        .slide-item { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.6s ease; }
+        .slide-item.active { opacity: 1; z-index: 1; }
+        .slide-item img { width: 100%; height: 100%; object-fit: cover; }
+        .slide-info { 
+            position: absolute; bottom: 20px; left: 20px; 
+            background: rgba(255,255,255,0.9); backdrop-filter: blur(5px);
+            padding: 8px 16px; border-radius: 30px; 
+            font-size: 12px; font-weight: 700; color: #333;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+       
+        .menu-section { padding: 0 24px; }
+        .section-header { font-size: 18px; font-weight: 800; margin-bottom: 20px; color: #333; display: flex; align-items: center; gap: 8px; }
+        .section-header::after { content: "TOOLS"; font-size: 12px; color: #ccc; font-weight: 700; background: #eee; padding: 2px 6px; border-radius: 6px; }
+
+        .grid-box { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 16px; 
+        }
+
+        .menu-card { 
+            background: #fff; border-radius: 24px; padding: 20px; 
+            display: flex; align-items: center; justify-content: space-between;
+            text-decoration: none; position: relative; overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.02);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+        }
+        .menu-card:active { transform: scale(0.96); box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+
+        .icon-bg {
+            width: 48px; height: 48px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; color: #fff;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+
+        .card-info { flex: 1; margin-left: 12px; }
+        .card-title { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 4px; }
+        .card-desc { font-size: 11px; color: #aaa; font-weight: 500; }
+
+       
+        .bg-1 { background: var(--g-love); box-shadow: 0 8px 20px rgba(254, 207, 239, 0.6); }
+        .bg-2 { background: var(--g-job); box-shadow: 0 8px 20px rgba(161, 140, 209, 0.4); }
+        .bg-3 { background: var(--g-study); box-shadow: 0 8px 20px rgba(132, 250, 176, 0.4); }
+        .bg-4 { background: var(--g-game); box-shadow: 0 8px 20px rgba(118, 75, 162, 0.4); }
+        .bg-5 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); box-shadow: 0 8px 20px rgba(67, 233, 123, 0.4); }
+        .bg-6 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); box-shadow: 0 8px 20px rgba(250, 112, 154, 0.4); }
+        .bg-7 { background: var(--g-contact); box-shadow: 0 8px 20px rgba(255, 94, 98, 0.4); }
+
+       
+        .modal-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 900; display: none; opacity: 0; transition: 0.3s; backdrop-filter: blur(5px); }
+
+        
+        .modal-body { 
+            position: fixed; bottom: 20px; left: 5%; width: 90%; 
+            background: #fff; border-radius: 28px; padding: 30px; 
+            z-index: 901; 
+            transform: translateY(120%); 
+            transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+        .modal-body.show { transform: translateY(0); opacity: 1; }
+
+      
+        .contact-modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+            width: 80%; max-width: 300px;
+            background: #fff; border-radius: 24px; padding: 30px 25px;
+            z-index: 1000; display: none; opacity: 0;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            text-align: center;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .contact-modal.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        
+        
+        .c-icon-big {
+            width: 64px; height: 64px; background: var(--g-contact);
+            border-radius: 50%; margin: 0 auto 15px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; color: white;
+            box-shadow: 0 10px 20px rgba(255, 94, 98, 0.3);
+        }
+        .c-info-box {
+            background: #F9F9F9; border-radius: 12px;
+            padding: 15px; margin: 15px 0; border: 1px solid #EEE;
+        }
+        .c-label { font-size: 12px; color: #999; margin-bottom: 4px; }
+        .c-value { font-size: 18px; font-weight: 800; color: #333; letter-spacing: 1px; }
+
+        .btn-copy {
+            width: 100%; padding: 12px; border-radius: 14px;
+            background: #121212; color: #fff; font-weight: 700;
+            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+            font-size: 14px;
+        }
+        .btn-copy:active { transform: scale(0.96); opacity: 0.9; }
+
+        
+        .inp-group { margin-bottom: 16px; }
+        .inp { 
+            width: 100%; padding: 16px; border-radius: 16px; 
+            border: 2px solid #f3f3f3; background: #f9f9f9; 
+            font-size: 15px; font-weight: 600; outline: none; transition: 0.3s; 
+        }
+        .inp:focus { border-color: #333; background: #fff; }
+        
+        .btn-main { 
+            width: 100%; padding: 16px; border-radius: 16px; 
+            background: #121212; color: #fff; font-size: 16px; font-weight: 700; 
+            border: none; cursor: pointer; transition: 0.2s; 
+        }
+        .btn-main:active { transform: scale(0.98); opacity: 0.9; }
+
+        .profile-header { text-align: center; margin-bottom: 20px; }
+        .u-avatar-lg { width: 75px; height: 75px; background: #f2f2f7; border-radius: 50%; margin: 0 auto 10px; line-height: 75px; font-size: 30px; color: #999; border: 3px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .btn-group { display: flex; gap: 12px; margin-top: 25px; }
+        .btn-save { flex: 2; background: #007AFF; color: white; border: none; padding: 14px; border-radius: 14px; font-weight: 600; font-size: 15px; cursor: pointer; }
+        .btn-logout { flex: 1; background: #FF3B30; color: white; border: none; padding: 14px; border-radius: 14px; font-weight: 600; font-size: 15px; cursor: pointer; }
+
+        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: 600; display: none; z-index: 2000; }
+
+    </style>
+</head>
+<body>
+    <div id="toast"></div>
+
+    <div class="header">
+        <div class="header-text">
+            <h1>Hi, 同学</h1>
+            <p>惠德综合高中 · 智慧校园</p>
+        </div>
+        <div id="navAvatar" class="user-avatar" onclick="handleAvatarClick()">
+            <i class="fas fa-user"></i>
+        </div>
+    </div>
+
+    <div class="banner-wrap">
+        <div id="bannerBox" class="banner-box">
             </div>
-            <p>Click to get data</p>
-            <form class="row" id="greet-form">
-                <input id="greet-input" placeholder="Enter a name..." />
-                <button type="submit" id="getdata">GET DATA</button>
-            </form>
-            <div class="functions">
-                <a href="./book.html" target="_self">跳转到book.html</a>
-                <a
-                    href="https://www.baidu.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >跳到百度blank
-                </a>
-                <a
-                    href="https://www.baidu.com"
-                    target="_self"
-                    rel="noopener noreferrer"
-                >
-                    跳到百度self
-                </a>
-                <button onclick="sayHello()">点击我</button>
-                <button onclick="sayHello()">下载文件</button>
-                <button onclick="sayHello()">上传文件</button>
-                <button onclick="sayHello()">访问相机</button>
-                <button onclick="sayHello()">访问麦克风</button>
-                <button onclick="sayHello()">访问相册</button>
-                <button class="btn" onclick="openWechat()">打开微信</button>
-                <button class="btn" onclick="openWechatScan()">
-                    打开扫一扫
-                </button>
-                <button class="btn" onclick="openZhihu()">打开知乎</button>
-                <button onclick="sayHello()">打开抖音</button>
-                <button onclick="sayHello()">用浏览器打开</button>
-                <button>打开知乎</button>
+    </div>
+
+    <div class="menu-section">
+        <div class="section-header">探索服务</div>
+        <div class="grid-box">
+            
+            <a href="love.html" class="menu-card">
+                <div class="card-info">
+                    <div class="card-title">表白墙</div>
+                    <div class="card-desc">勇敢表达爱意</div>
+                </div>
+                <div class="icon-bg bg-1"><i class="fas fa-heart"></i></div>
+            </a>
+
+            <a href="job.html" class="menu-card">
+                <div class="card-info">
+                    <div class="card-title">校园兼职</div>
+                    <div class="card-desc">勤工俭学</div>
+                </div>
+                <div class="icon-bg bg-2"><i class="fas fa-briefcase"></i></div>
+            </a>
+
+            <div class="menu-card" onclick="showDev('学霸资料')">
+                <div class="card-info">
+                    <div class="card-title">学习资料</div>
+                    <div class="card-desc">期末不挂科</div>
+                </div>
+                <div class="icon-bg bg-3"><i class="fas fa-book"></i></div>
             </div>
-            <p id="greet-msg"></p>
-            <img src="./static/image/cursor.jpeg" alt="logo" />
-            <video
-                src="https://hk.gh-proxy.org/https://github.com/Sjj1024/PakePlus/blob/main/docs/static/videos/pakeplus.mp4"
-                autoplay
-                controls
-                style="width: 100%; height: 100%"
-            ></video>
-            <audio src="./static/music/yin.mp3" controls></audio>
-        </main>
-    </body>
+
+            <a href="game.html" class="menu-card">
+                <div class="card-info">
+                    <div class="card-title">游戏开黑</div>
+                    <div class="card-desc">寻找最强队友</div>
+                </div>
+                <div class="icon-bg bg-4"><i class="fas fa-gamepad"></i></div>
+            </a>
+
+            <a href="trade.html" class="menu-card">
+                <div class="card-info">
+                    <div class="card-title">跳蚤市场</div>
+                    <div class="card-desc">闲置变废为宝</div>
+                </div>
+                <div class="icon-bg bg-5"><i class="fas fa-store"></i></div>
+            </a>
+
+            <div class="menu-card" onclick="showDev('失物招领')">
+                <div class="card-info">
+                    <div class="card-title">失物招领</div>
+                    <div class="card-desc">寻找丢失物品</div>
+                </div>
+                <div class="icon-bg bg-6"><i class="fas fa-compass"></i></div>
+            </div>
+            
+            <div class="menu-card" onclick="openContact()">
+                <div class="card-info">
+                    <div class="card-title">联系与举报</div>
+                    <div class="card-desc">找管理/投诉</div>
+                </div>
+                <div class="icon-bg bg-7"><i class="fas fa-headset"></i></div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="modalMask" class="modal-mask" onclick="closeAll()"></div>
+
+    <div id="contactModal" class="contact-modal">
+        <div class="c-icon-big"><i class="fas fa-user-shield"></i></div>
+        <h3 style="margin:0 0 10px 0; color:#333;">联系管理员</h3>
+        <p style="font-size:13px; color:#888; margin-bottom:20px; line-height:1.6;">
+            如遇账号问题、违规内容举报<br>或功能建议，请添加微信联系
+        </p>
+        
+        <div class="c-info-box">
+            <div class="c-label">官方微信号</div>
+            <div class="c-value" id="wxId">Minkyyh</div>
+        </div>
+
+        <button class="btn-copy" onclick="copyContact()">
+            <i class="far fa-copy"></i> 一键复制微信号
+        </button>
+    </div>
+
+    <div id="profileBody" class="modal-body">
+        <h3 style="margin-bottom:20px; font-weight:800; font-size:20px;">编辑资料</h3>
+        <div class="inp-group">
+            <input type="text" id="editNickname" class="inp" placeholder="怎么称呼你？">
+        </div>
+        <div class="inp-group">
+            <input type="text" id="editDesc" class="inp" placeholder="个性签名 (选填)">
+        </div>
+        <div class="inp-group">
+            <input type="password" id="editPassword" class="inp" placeholder="修改密码 (不改留空)">
+        </div>
+        <div class="btn-group">
+            <button class="btn-logout" onclick="doLogout()">退出</button>
+            <button id="btnSave" class="btn-save" onclick="saveProfile()">保存更新</button>
+        </div>
+    </div>
+
+    <script>
+        const banners = [
+            { img: "1.png", title: "校园风采", desc: "" },
+            { img: "2.png", title: "青春纪念", desc: "" }
+        ];
+
+        window.onload = () => { renderBanners(); checkLogin(); };
+
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 1500);
+        }
+
+        function openContact() {
+            document.getElementById('modalMask').style.display = 'block';
+            document.getElementById('contactModal').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('modalMask').style.opacity = 1;
+                document.getElementById('contactModal').classList.add('show');
+            }, 10);
+        }
+
+        function copyContact() {
+            const wxId = document.getElementById('wxId').innerText;
+            navigator.clipboard.writeText(wxId).then(() => {
+                showToast("复制成功！请去微信添加");
+                setTimeout(closeAll, 1200);
+            }).catch(() => {
+                showToast("复制失败，请手动长按复制");
+            });
+        }
+
+       
+        function closeAll() {
+            const mask = document.getElementById('modalMask');
+            const pBody = document.getElementById('profileBody');
+            const cModal = document.getElementById('contactModal');
+
+            mask.style.opacity = 0;
+            pBody.classList.remove('show');
+            cModal.classList.remove('show');
+
+            setTimeout(() => {
+                mask.style.display = 'none';
+                cModal.style.display = 'none';
+                pBody.style.display = 'none'; 
+               
+            }, 300);
+        }
+
+        function checkLogin() {
+            const user = Bmob.User.current();
+            const avatar = document.getElementById('navAvatar');
+            if(user) {
+                avatar.classList.add('logged-in');
+                avatar.innerHTML = `<span style="font-weight:bold">${(user.nickname || user.username).charAt(0).toUpperCase()}</span>`;
+            }
+        }
+
+        function handleAvatarClick() {
+            const user = Bmob.User.current();
+            if(!user) {
+                if(confirm("开启更多功能需要先登录哦~")) location.href = "login.html";
+            } else {
+                openProfile(user);
+            }
+        }
+
+        function openProfile(u) {
+            document.getElementById('editNickname').value = u.nickname || "";
+            document.getElementById('editDesc').value = u.desc || "";
+            
+            document.getElementById('modalMask').style.display = 'block';
+            document.getElementById('profileBody').style.display = 'block'; 
+            setTimeout(() => {
+                document.getElementById('modalMask').style.opacity = 1;
+                document.getElementById('profileBody').classList.add('show');
+            }, 10);
+        }
+
+        async function saveProfile() {
+            const user = Bmob.User.current();
+            const nick = document.getElementById('editNickname').value.trim();
+            const desc = document.getElementById('editDesc').value.trim();
+            const pass = document.getElementById('editPassword').value;
+            const btn = document.getElementById('btnSave');
+
+            if(!nick) return showToast("昵称不能为空");
+            
+            if (typeof checkSensitive === 'function') {
+                const badNick = checkSensitive(nick);
+                if (badNick) return showToast("昵称包含违禁词");
+                const badDesc = checkSensitive(desc);
+                if (badDesc) return showToast("签名包含违禁词");
+            }
+            
+            btn.innerText = "保存中...";
+            try {
+                const query = Bmob.Query("_User");
+                query.set('id', user.objectId);
+                query.set('nickname', nick);
+                query.set('desc', desc);
+                if(pass.length >= 6) query.set('password', pass);
+                await query.save();
+                showToast("保存成功");
+                setTimeout(() => location.reload(), 800);
+            } catch(e) {
+                showToast("失败: " + e.message);
+                btn.innerText = "保存更新";
+            }
+        }
+
+        function doLogout() {
+            if(confirm("确定要退出吗？")) { Bmob.User.logout(); location.reload(); }
+        }
+
+        function showDev(name) { showToast(name + " 即将上线"); }
+
+        function renderBanners() {
+            const box = document.getElementById('bannerBox');
+            if(!box) return;
+            box.innerHTML = banners.map((b, i) => `
+                <div class="slide-item ${i===0?'active':''}">
+                    <img src="${b.img}">
+                    ${b.title ? `<div class="slide-info">${b.title}</div>` : ''}
+                </div>
+            `).join('');
+            
+            let cur = 0;
+            setInterval(() => {
+                const items = document.querySelectorAll('.slide-item');
+                if(items.length < 1) return;
+                items[cur].classList.remove('active');
+                cur = (cur + 1) % items.length;
+                items[cur].classList.add('active');
+            }, 4000);
+        }
+    </script>
+</body>
 </html>
