@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>惠德 - 跳蚤市场</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <script src="./Bmob-2.7.0.min.js"></script>
+    <script src="./config.js"></script>
+    <script src="./banned_words.js"></script>
+
+    <style>
+        :root {
+            --bg-body: #F5F6F8;
+            --card-white: #FFFFFF;
+            --text-main: #1D1D1F;
+            --price-red: #FF4757;
+            /* 潮流渐变 */
+            --g-trade: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+            --g-btn: linear-gradient(135deg, #121212 0%, #333 100%);
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background-color: var(--bg-body); 
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; 
+            color: var(--text-main); 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding-bottom: 80px; 
+        }
+
+        /* 顶部导航 */
+        .navbar {
+            position: sticky; top: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+        .nav-title { font-size: 18px; font-weight: 800; color: #333; }
+        .back-btn { font-size: 20px; color: #333; cursor: pointer; }
+        
+        /* 顶部 Banner */
+        .market-banner {
+            margin: 15px 20px;
+            padding: 25px;
+            border-radius: 20px;
+            background: var(--g-trade);
+            color: white;
+            box-shadow: 0 10px 25px rgba(161, 140, 209, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        .market-banner h2 { font-size: 22px; font-weight: 800; margin-bottom: 5px; }
+        .market-banner p { font-size: 13px; opacity: 0.9; }
+        .market-banner i {
+            position: absolute; right: -10px; bottom: -20px;
+            font-size: 100px; opacity: 0.2; transform: rotate(-15deg);
+        }
+
+        /* --- 新增：防骗警示条样式 --- */
+        .safety-tip {
+            margin: 0 20px 15px;
+            padding: 12px 16px;
+            background: #FFF2F2; /* 浅红色背景 */
+            color: #FF4757;       /* 醒目的红色文字 */
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(255, 71, 87, 0.1);
+            line-height: 1.4;
+        }
+        .safety-tip i { font-size: 14px; animation: flash 2s infinite; }
+        
+        /* 简单的闪烁动画吸引注意力 */
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* 分类 Tab 栏 */
+        .category-tabs {
+            display: flex;
+            padding: 0 20px 15px;
+            overflow-x: auto;
+            gap: 10px;
+            scrollbar-width: none; 
+        }
+        .category-tabs::-webkit-scrollbar { display: none; }
+        
+        .tab-item {
+            padding: 8px 16px;
+            background: #fff;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            border: 1px solid transparent;
+        }
+        .tab-item.active {
+            background: #121212;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        /* 商品列表 - 双列瀑布流 */
+        .goods-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 0 20px;
+        }
+
+        .goods-card {
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+            transition: 0.2s;
+            position: relative;
+            display: flex; flex-direction: column;
+        }
+        .goods-card:active { transform: scale(0.96); }
+
+        /* 商品纯色背景区 */
+        .goods-img {
+            width: 100%; aspect-ratio: 1/1;
+            position: relative;
+        }
+        
+        /* 图片上的分类小标签 */
+        .img-tag {
+            position: absolute; top: 12px; left: 12px;
+            background: rgba(255,255,255,0.3); 
+            color: white;
+            font-size: 11px; padding: 4px 10px; border-radius: 20px;
+            backdrop-filter: blur(8px);
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.2);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .goods-info { padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .goods-title { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 6px; line-height: 1.4; }
+        .goods-desc { font-size: 11px; color: #999; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        .goods-bottom { display: flex; align-items: center; justify-content: space-between; }
+        .price-tag { color: var(--price-red); font-weight: 800; font-size: 16px; }
+        .price-tag span { font-size: 11px; font-weight: normal; }
+        
+        .seller-tag { 
+            font-size: 10px; color: #aaa; background: #f5f5f5; 
+            padding: 2px 6px; border-radius: 4px; 
+        }
+
+        .contact-bar {
+            margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee;
+            text-align: center;
+        }
+        .btn-contact {
+            font-size: 12px; color: #333; font-weight: 700;
+            background: #f0f0f0; padding: 6px 12px; border-radius: 20px; border: none;
+            width: 100%; cursor: pointer;
+        }
+        .btn-delete {
+            background: #fff0f0; color: #ff4757; margin-top: 5px;
+        }
+
+        .fab {
+            position: fixed; bottom: 30px; right: 25px;
+            width: 60px; height: 60px;
+            background: var(--g-btn);
+            color: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            z-index: 900; cursor: pointer; transition: 0.2s;
+        }
+        .fab:active { transform: scale(0.9); }
+
+        .modal-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 990; display: none; }
+        .modal-panel {
+            position: fixed; bottom: 20px; left: 5%; width: 90%;
+            background: #fff; border-radius: 24px; padding: 25px;
+            z-index: 999; transform: translateY(120%); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .modal-panel.show { transform: translateY(0); }
+
+        .form-group { margin-bottom: 15px; }
+        .form-label { font-size: 12px; font-weight: 700; color: #888; margin-bottom: 5px; display: block; }
+        .form-input, .form-select { 
+            width: 100%; padding: 14px; background: #f9f9f9; 
+            border: 1px solid #eee; border-radius: 12px; 
+            font-size: 14px; outline: none; transition: 0.3s;
+        }
+        .form-input:focus, .form-select:focus { background: #fff; border-color: #333; }
+        
+        .btn-submit {
+            width: 100%; padding: 14px; background: #121212; color: #fff;
+            border: none; border-radius: 14px; font-weight: 700; font-size: 16px;
+        }
+
+        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; z-index: 2000; display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="toast"></div>
+
+    <div class="navbar">
+        <div class="back-btn" onclick="history.back()"><i class="fas fa-chevron-left"></i></div>
+        <div class="nav-title">跳蚤市场</div>
+        <div style="width: 20px;"></div>
+    </div>
+
+    <div class="market-banner">
+        <h2>闲置回血</h2>
+        <p>让好物流转，让价值延续</p>
+        <i class="fas fa-shopping-bag"></i>
+    </div>
+
+    <div class="safety-tip">
+        <i class="fas fa-bullhorn"></i>
+        <span>安全警示：请勿轻信先付款后发货，谨防诈骗，建议闲鱼app或者校内当面交易！</span>
+    </div>
+
+    <div class="category-tabs">
+        <div class="tab-item active" onclick="filterCategory('all', this)">全部</div>
+        <div class="tab-item" onclick="filterCategory('游戏账号', this)">游戏账号</div>
+        <div class="tab-item" onclick="filterCategory('游戏出租', this)">游戏出租</div>
+        <div class="tab-item" onclick="filterCategory('书籍资料', this)">书籍资料</div>
+        <div class="tab-item" onclick="filterCategory('数码电子', this)">数码电子</div>
+        <div class="tab-item" onclick="filterCategory('生活用品', this)">生活用品</div>
+        <div class="tab-item" onclick="filterCategory('服饰鞋包', this)">服饰鞋包</div>
+        <div class="tab-item" onclick="filterCategory('其他', this)">其他</div>
+    </div>
+
+    <div class="goods-grid" id="goodsList">
+        <div style="grid-column: 1 / -1; text-align: center; color: #999; padding: 40px;">加载中...</div>
+    </div>
+
+    <div class="fab" onclick="openModal()"><i class="fas fa-plus"></i></div>
+
+    <div class="modal-mask" id="mask" onclick="closeModal()"></div>
+    <div class="modal-panel" id="panel">
+        <h3 style="margin-bottom: 20px; font-weight: 800;">发布闲置</h3>
+        
+        <div class="form-group">
+            <label class="form-label">商品分类</label>
+            <select id="tCategory" class="form-select">
+                <option value="游戏账号">游戏账号</option>
+                <option value="游戏出租">游戏出租</option>
+                <option value="书籍资料">书籍资料</option>
+                <option value="数码电子">数码电子</option>
+                <option value="生活用品">生活用品</option>
+                <option value="服饰鞋包">服饰鞋包</option>
+                <option value="其他">其他</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">商品名称</label>
+            <input type="text" id="tTitle" class="form-input" placeholder="例如：9成新计算器">
+        </div>
+        <div class="form-group">
+            <label class="form-label">出售价格</label>
+            <input type="text" id="tPrice" class="form-input" placeholder="例如：15">
+        </div>
+        <div class="form-group">
+            <label class="form-label">商品描述</label>
+            <textarea id="tDesc" class="form-input" rows="2" placeholder="简单描述一下成色..."></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">联系方式</label>
+            <input type="text" id="tContact" class="form-input" placeholder="QQ或微信号">
+        </div>
+        <button id="btnPub" class="btn-submit" onclick="submitTrade()">立即发布</button>
+    </div>
+
+    <script>
+        let currentCategory = 'all';
+
+        window.onload = function() {
+            loadGoods();
+        };
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 1500);
+        }
+
+        function filterCategory(cat, el) {
+            currentCategory = cat;
+            document.querySelectorAll('.tab-item').forEach(item => item.classList.remove('active'));
+            el.classList.add('active');
+            loadGoods();
+        }
+
+        function openModal() {
+            const user = Bmob.User.current();
+            if(!user) return showToast("请先在主页登录");
+            document.getElementById('mask').style.display = 'block';
+            setTimeout(() => document.getElementById('panel').classList.add('show'), 10);
+        }
+
+        function closeModal() {
+            document.getElementById('panel').classList.remove('show');
+            setTimeout(() => document.getElementById('mask').style.display = 'none', 300);
+        }
+
+        async function submitTrade() {
+            const user = Bmob.User.current();
+            const category = document.getElementById('tCategory').value;
+            const title = document.getElementById('tTitle').value.trim();
+            const price = document.getElementById('tPrice').value.trim();
+            const desc = document.getElementById('tDesc').value.trim();
+            const contact = document.getElementById('tContact').value.trim();
+            const btn = document.getElementById('btnPub');
+
+            if(!title || !price || !contact) return showToast("请填写完整信息");
+
+            // ★★★ 2. 核心新增：违禁词检测 ★★★
+            if (typeof checkSensitive === 'function') {
+                if (checkSensitive(title)) return showToast("标题包含违规词");
+                if (checkSensitive(desc)) return showToast("描述包含违规词");
+                if (checkSensitive(contact)) return showToast("联系方式包含违规词");
+            }
+            // ★★★ 新增结束 ★★★
+
+            btn.disabled = true;
+            btn.innerText = "发布中...";
+
+            const query = Bmob.Query('TradePost');
+            query.set("category", category);
+            query.set("title", title);
+            query.set("price", price);
+            query.set("desc", desc);
+            query.set("contact", contact);
+            query.set("sellerName", user.nickname || user.username);
+
+            const pointer = { "__type": "Pointer", "className": "_User", "objectId": user.objectId };
+            query.set("sellerObj", pointer);
+
+            try {
+                await query.save();
+                showToast("发布成功");
+                closeModal();
+                
+                // 重置表单
+                document.getElementById('tTitle').value = '';
+                document.getElementById('tPrice').value = '';
+                document.getElementById('tDesc').value = '';
+                loadGoods();
+            } catch(e) {
+                showToast("发布失败: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "立即发布";
+            }
+        }
+
+        async function loadGoods() {
+            const q = Bmob.Query("TradePost");
+            q.order("-createdAt");
+            
+            if(currentCategory !== 'all') {
+                q.equalTo("category", "==", currentCategory);
+            }
+
+            q.limit(50);
+
+            try {
+                const res = await q.find();
+                const box = document.getElementById('goodsList');
+                
+                if(res.length === 0) {
+                    box.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #ccc; margin-top: 50px;">暂无该类商品，快来发布吧</div>';
+                    return;
+                }
+
+                const currentUser = Bmob.User.current();
+                let html = '';
+
+                // 糖果色渐变背景
+                const gradients = [
+                    'linear-gradient(120deg, #a18cd1 0%, #fbc2eb 100%)',
+                    'linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%)',
+                    'linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%)',
+                    'linear-gradient(120deg, #fccb90 0%, #d57eeb 100%)'
+                ];
+
+                res.forEach((item, index) => {
+                    const isMine = currentUser && item.sellerObj && (item.sellerObj.objectId === currentUser.objectId);
+                    const bgStyle = gradients[index % gradients.length];
+                    const catName = item.category || '其他';
+                    
+                    html += `
+                    <div class="goods-card">
+                        <div class="goods-img" style="background:${bgStyle};">
+                            <div class="img-tag">${catName}</div>
+                        </div>
+                        <div class="goods-info">
+                            <div>
+                                <div class="goods-title">${item.title}</div>
+                                <div class="goods-desc">${item.desc || '暂无描述'}</div>
+                            </div>
+                            <div>
+                                <div class="goods-bottom">
+                                    <div class="price-tag"><span>¥</span>${item.price}</div>
+                                    <div class="seller-tag">${item.sellerName}</div>
+                                </div>
+                                <div class="contact-bar">
+                                    <button class="btn-contact" onclick="copyContact('${item.contact}')">想要</button>
+                                    ${isMine ? `<button class="btn-contact btn-delete" onclick="delTrade('${item.objectId}')">下架</button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                box.innerHTML = html;
+
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function copyContact(str) {
+            navigator.clipboard.writeText(str).then(() => showToast("已复制卖家联系方式"));
+        }
+
+        async function delTrade(id) {
+            if(!confirm("确定下架该商品吗？")) return;
+            const q = Bmob.Query("TradePost");
+            try {
+                await q.destroy(id);
+                showToast("已下架");
+                loadGoods();
+            } catch(e) {
+                showToast("操作失败");
+            }
+        }
+    </script>
+</body>
+</html>
