@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>惠德表白墙</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <script src="./Bmob-2.7.0.min.js"></script>
+    <script src="./config.js"></script>
+    <script src="./banned_words.js"></script>
+
+    <style>
+      
+        :root {
+            --primary: #FF4757; 
+            --primary-gradient: linear-gradient(135deg, #FF6B81, #FF4757);
+            --bg-color: #F2F2F7;
+            --text-main: #2F3542;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { background-color: var(--bg-color); font-family: -apple-system, "PingFang SC", sans-serif; color: var(--text-main); max-width: 600px; margin: 0 auto; padding-bottom: 80px; }
+        .nav-bar { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .nav-title { font-size: 18px; font-weight: 800; color: #2F3542; letter-spacing: -0.5px; }
+        .nav-back { color: #2F3542; font-size: 15px; text-decoration: none; font-weight: 600; display: flex; align-items: center; background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 20px; transition: 0.2s; }
+        .nav-back:active { transform: scale(0.95); }
+        .marquee-wrapper { padding: 15px 20px 5px 20px; }
+        .marquee-capsule { background: linear-gradient(135deg, #FFF6E5, #FFF0D6); color: #E67E22; font-size: 12px; font-weight: 500; padding: 10px 15px; border-radius: 16px; display: flex; align-items: center; gap: 10px; overflow: hidden; border: 1px solid rgba(230, 126, 34, 0.15); box-shadow: 0 4px 15px rgba(230, 126, 34, 0.08); }
+        .marquee-icon { font-size: 16px; color: #E67E22; animation: pulse 2s infinite; flex-shrink: 0; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        .marquee-content { flex: 1; overflow: hidden; position: relative; height: 18px; }
+        .marquee-text { position: absolute; white-space: nowrap; animation: scroll 20s linear infinite; line-height: 18px; }
+        @keyframes scroll { 0% { transform: translateX(10%); } 100% { transform: translateX(-120%); } }
+        .feed-list { padding: 10px 15px; min-height: 60vh; }
+        .post-card { background: #fff; border-radius: 24px; padding: 20px; margin-bottom: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); animation: fadeInUp 0.5s ease; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .post-header { display: flex; align-items: center; margin-bottom: 12px; }
+        .p-avatar { width: 48px; height: 48px; border-radius: 50%; background: #F1F2F6; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #A4B0BE; margin-right: 12px; font-size: 20px; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .p-avatar.clickable { background: linear-gradient(135deg, #FF6B81, #FF4757); color: white; cursor: pointer; box-shadow: 0 4px 10px rgba(255, 71, 87, 0.3); }
+        .p-info { flex: 1; }
+        .p-name { font-size: 16px; font-weight: 700; color: #2F3542; }
+        .p-time { font-size: 12px; color: #A4B0BE; margin-top: 3px; font-weight: 500; }
+        .btn-delete-post { color: #ccc; font-size: 14px; padding: 5px 10px; cursor: pointer; transition: 0.2s; }
+        .btn-delete-post:active { color: #FF4757; transform: scale(0.9); }
+        .post-content { font-size: 15px; line-height: 1.7; color: #2F3542; margin-bottom: 15px; white-space: pre-wrap; font-weight: 400; }
+        .post-actions { border-top: 1px solid #F1F2F6; padding-top: 12px; display: flex; justify-content: flex-end; gap: 20px; }
+        .action-btn { color: #747D8C; font-size: 13px; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 12px; transition: 0.2s; background: #F7F8FA; font-weight: 600; }
+        .action-btn:active { transform: scale(0.95); }
+        .action-btn.liked { color: #FF4757; background: #FFF0F1; }
+        .comment-section { background: #F7F8FA; margin-top: 15px; padding: 15px; border-radius: 16px; display: none; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .comment-item { font-size: 13px; margin-bottom: 8px; color: #57606F; line-height: 1.5; }
+        .c-name { font-weight: 700; color: #2F3542; margin-right: 4px; }
+        .del-comment-btn { font-size: 11px; color: #FF4757; margin-left: 8px; cursor: pointer; text-decoration: underline; opacity: 0.7; }
+        .comment-input-box { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
+        .c-input { flex: 1; border: none; padding: 10px; border-radius: 12px; font-size: 13px; outline: none; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+        .c-btn { background: #2F3542; color: white; border: none; padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .fab-btn { position: fixed; bottom: 30px; right: 25px; width: 60px; height: 60px; background: var(--primary-gradient); border-radius: 50%; box-shadow: 0 10px 25px rgba(255, 71, 87, 0.4); display: flex; align-items: center; justify-content: center; color: white; font-size: 30px; cursor: pointer; z-index: 900; transition: transform 0.2s; }
+        .fab-btn:active { transform: scale(0.9) rotate(90deg); }
+        .sheet-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(3px); }
+        .sheet-modal { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; border-radius: 30px 30px 0 0; padding: 25px; z-index: 1001; transform: translateY(100%); transition: 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); max-width: 600px; left: 50%; margin-left: -50%; }
+        @media (min-width: 600px) { .sheet-modal { margin-left: -300px; } }
+        .sheet-modal.show { transform: translateY(0); }
+        .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .sheet-title { font-size: 18px; font-weight: 800; }
+        .sheet-close { font-size: 24px; color: #ccc; cursor: pointer; }
+        .input-area { width: 100%; border: none; background: #F1F2F6; border-radius: 16px; padding: 15px; font-size: 15px; resize: none; height: 120px; font-family: inherit; color: #2F3542; margin-bottom: 15px; }
+        .input-area:focus { background: #fff; box-shadow: 0 0 0 2px rgba(255, 71, 87, 0.1); }
+        .sheet-footer { display: flex; justify-content: space-between; align-items: center; }
+        .switch-label { font-size: 14px; color: #747D8C; display: flex; align-items: center; gap: 6px; }
+        .switch-label input { accent-color: var(--primary); width: 18px; height: 18px; }
+        .btn-send { background: var(--primary-gradient); color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3); }
+        .user-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); width: 80%; max-width: 320px; background: rgba(255,255,255,0.95); border-radius: 24px; padding: 30px 20px; text-align: center; z-index: 2001; display: none; box-shadow: 0 20px 60px rgba(0,0,0,0.2); transition: 0.3s; }
+        .user-modal.show { transform: translate(-50%, -50%) scale(1); }
+        .m-avatar { width: 70px; height: 70px; background: var(--primary-gradient); color: white; border-radius: 50%; margin: 0 auto 15px; line-height: 70px; font-size: 28px; border: 3px solid #fff; box-shadow: 0 8px 20px rgba(255, 71, 87, 0.3); }
+        .m-name { font-size: 20px; font-weight: 800; margin-bottom: 12px; }
+        .m-desc { font-size: 14px; color: #747D8C; background: #F1F2F6; padding: 15px; border-radius: 16px; }
+        .m-close { margin-top: 25px; color: #fff; background: #2F3542; border: none; font-size: 14px; padding: 10px 30px; border-radius: 20px; font-weight: bold; }
+        .toast { position: fixed; top: 50%; left: 50%; transform: translateX(-50%); background: rgba(47, 53, 66, 0.9); color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; z-index: 3000; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="toast" id="toast">提示</div>
+
+    <div class="nav-bar">
+        <a href="index.html" class="nav-back"><i class="fas fa-arrow-left" style="margin-right:6px;"></i> 返回</a>
+        <div class="nav-title">惠德表白墙</div>
+        <div style="width: 60px;"></div>
+    </div>
+
+    <div class="marquee-wrapper">
+        <div class="marquee-capsule">
+            <i class="fas fa-shield-alt marquee-icon"></i> 
+            <div class="marquee-content">
+                <div class="marquee-text">
+                    安全提示：网络交友需谨慎，涉及金钱往来切勿轻信。禁止发布辱骂、造谣、低俗等违规信息，违者封号处理。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="feed-list" id="feedList">
+        <div style="padding:40px 20px; text-align:center; color:#A4B0BE;">
+            <i class="fas fa-spinner fa-spin"></i> 正在加载甜蜜内容...
+        </div>
+    </div>
+
+    <div class="fab-btn" onclick="openPublishSheet()">
+        <i class="fas fa-plus"></i>
+    </div>
+
+    <div class="sheet-mask" id="sheetMask" onclick="closePublishSheet()"></div>
+    <div class="sheet-modal" id="sheetModal">
+        <div class="sheet-header">
+            <div class="sheet-title">发布表白</div>
+            <i class="fas fa-times sheet-close" onclick="closePublishSheet()"></i>
+        </div>
+
+        <textarea id="postContent" class="input-area" placeholder="此刻，说出你的心声... (文明发言)"></textarea>
+        
+        <div class="sheet-footer">
+            <label class="switch-label">
+                <input type="checkbox" id="isAnonymous"> 
+                <i class="fas fa-mask"></i> 匿名发布
+            </label>
+            <button class="btn-send" onclick="submitPost()" id="btnPub">
+                <i class="fas fa-paper-plane" style="margin-right:5px;"></i> 发布
+            </button>
+        </div>
+    </div>
+
+    <div class="sheet-mask" id="userModalMask" onclick="closeUserModal()"></div>
+    <div class="user-modal" id="userModal">
+        <div class="m-avatar" id="mAvatar">U</div>
+        <div class="m-name" id="mName">User</div>
+        <div class="m-desc" id="mDesc">这个人很懒，什么都没写</div>
+        <button class="m-close" onclick="closeUserModal()">关闭</button>
+    </div>
+
+    <script>
+   
+
+        window.onload = function() {
+            loadPosts();
+        };
+
+        function openPublishSheet() {
+            const user = Bmob.User.current();
+            if(!user) { 
+                if(confirm("发布需要登录，去登录吗？")) window.location.href="login.html"; 
+                return; 
+            }
+            const mask = document.getElementById('sheetMask');
+            const modal = document.getElementById('sheetModal');
+            mask.style.display = 'block';
+            setTimeout(() => { mask.style.opacity = 1; modal.classList.add('show'); }, 10);
+        }
+
+        function closePublishSheet() {
+            const mask = document.getElementById('sheetMask');
+            const modal = document.getElementById('sheetModal');
+            modal.classList.remove('show');
+            mask.style.opacity = 0;
+            setTimeout(() => { mask.style.display = 'none'; }, 300);
+        }
+
+        async function submitPost() {
+            const user = Bmob.User.current();
+            const content = document.getElementById('postContent').value.trim();
+            const isAnonymous = document.getElementById('isAnonymous').checked;
+            const btn = document.getElementById('btnPub');
+
+            if(!content) { showToast("内容不能为空"); return; }
+
+            // ★★★ 2. 核心新增：检测表白内容 ★★★
+            if (typeof checkSensitive === 'function') {
+                const badContent = checkSensitive(content);
+                if (badContent) return showToast("内容包含违规词，无法发布");
+            }
+            // ★★★ 新增结束 ★★★
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            try {
+                const canPost = await checkLimit(user.objectId);
+                if(!canPost) {
+                    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> 发布';
+                    return; 
+                }
+
+                const query = Bmob.Query("LovePost");
+                query.set("content", content);
+                
+                const pointer = Bmob.Pointer('_User');
+                const poiID = pointer.set(user.objectId);
+                query.set("author", poiID); 
+
+                query.set("isAnonymous", isAnonymous);
+                query.set("isTop", false);
+                query.set("likes", 0);
+                
+                await query.save();
+                
+                showToast("发布成功！");
+                document.getElementById('postContent').value = "";
+                
+                closePublishSheet();
+                loadPosts(); 
+
+            } catch(e) {
+                console.error(e);
+                showToast("发布失败");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> 发布';
+            }
+        }
+
+        async function checkLimit(userId) {
+            const now = new Date();
+            const todayStart = new Date(now.setHours(0,0,0,0)).toISOString();
+            const d = new Date();
+            const day = d.getDay() || 7; 
+            if(day !== 1) d.setHours(-24 * (day - 1)); 
+            d.setHours(0,0,0,0);
+            const weekStart = d.toISOString();
+
+            const q1 = Bmob.Query("LovePost");
+            q1.equalTo("author", "==", userId);
+            q1.equalTo("createdAt", ">=", todayStart);
+            const dayCount = await q1.count();
+            if(dayCount >= 2) { alert("今天发太多啦 (限2条)"); return false; }
+
+            const q2 = Bmob.Query("LovePost");
+            q2.equalTo("author", "==", userId);
+            q2.equalTo("createdAt", ">=", weekStart);
+            const weekCount = await q2.count();
+            if(weekCount >= 5) { alert("本周额度已用完 (限5条)"); return false; }
+            return true;
+        }
+
+        function loadPosts() {
+            const query = Bmob.Query("LovePost");
+            query.include("author"); 
+            query.order("-createdAt");
+            query.limit(20);
+            
+            const currentUser = Bmob.User.current();
+
+            query.find().then(res => {
+                const list = document.getElementById('feedList');
+                list.innerHTML = "";
+                
+                if(res.length === 0) {
+                    list.innerHTML = `<div style="text-align:center; padding:40px 20px;"><i class="fas fa-wind" style="font-size:40px; color:#ddd;"></i><div style="margin-top:10px; color:#aaa;">这里空荡荡的，快来抢沙发~</div></div>`;
+                    return;
+                }
+
+                res.forEach(post => {
+                    const isAnon = post.isAnonymous;
+                    const author = post.author || {};
+                    const nick = (isAnon || !author.objectId) ? "匿名同学" : (author.nickname || "神秘同学");
+                    const avatarChar = (isAnon || !author.objectId) ? "<i class='fas fa-mask'></i>" : (nick.charAt(0).toUpperCase());
+                    
+                    const canClick = !isAnon && author.objectId;
+                    const avatarClass = canClick ? "p-avatar clickable" : "p-avatar";
+                    const clickEvent = canClick ? `onclick="showUser('${author.objectId}')"` : "";
+                    
+                    let deleteBtnHTML = "";
+                    if(currentUser && author.objectId === currentUser.objectId) {
+                        deleteBtnHTML = `<i class="fas fa-trash-alt btn-delete-post" onclick="deletePost('${post.objectId}')"></i>`;
+                    }
+
+                    const html = `
+                        <div class="post-card" id="card-${post.objectId}">
+                            <div class="post-header">
+                                <div class="${avatarClass}" ${clickEvent}>${avatarChar}</div>
+                                <div class="p-info">
+                                    <div class="p-name">${nick}</div>
+                                    <div class="p-time">${post.createdAt.split(' ')[0]}</div>
+                                </div>
+                                ${deleteBtnHTML}
+                            </div>
+                            <div class="post-content">${post.content}</div>
+                            <div class="post-actions">
+                                <button class="action-btn" onclick="addLike(this, '${post.objectId}')">
+                                    <i class="far fa-heart"></i> <span>${post.likes || 0}</span>
+                                </button>
+                                <button class="action-btn" onclick="toggleComment('${post.objectId}')">
+                                    <i class="far fa-comment-alt"></i> 评论
+                                </button>
+                            </div>
+                            <div class="comment-section" id="comment-box-${post.objectId}">
+                                <div id="c-list-${post.objectId}"></div>
+                                <div class="comment-input-box">
+                                    <input type="text" class="c-input" id="c-input-${post.objectId}" placeholder="写下你的评论...">
+                                    <label style="font-size:12px; display:flex; align-items:center; color:#747D8C;">
+                                        <input type="checkbox" id="c-anon-${post.objectId}" style="margin-right:4px;"> 匿名
+                                    </label>
+                                    <button class="c-btn" onclick="sendComment('${post.objectId}')">发送</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    list.innerHTML += html;
+                    loadComments(post.objectId);
+                });
+            });
+        }
+
+        function deletePost(postId) {
+            if(!confirm("确定要删除这条表白吗？")) return;
+            Bmob.Query("LovePost").destroy(postId).then(res => {
+                showToast("删除成功");
+                const card = document.getElementById("card-" + postId);
+                if(card) card.remove();
+            });
+        }
+
+        function deleteComment(commentId, postId) {
+            if(!confirm("确定删除这条评论？")) return;
+            Bmob.Query("Comment").destroy(commentId).then(res => {
+                showToast("评论已删除");
+                loadComments(postId); 
+            });
+        }
+
+        function addLike(btn, postId) {
+            const icon = btn.querySelector('i');
+            const numSpan = btn.querySelector('span');
+            if(icon.classList.contains('fas')) return;
+            const query = Bmob.Query("LovePost");
+            query.get(postId).then(post => {
+                post.increment("likes");
+                post.save();
+                btn.classList.add('liked');
+                icon.classList.remove('far'); icon.classList.add('fas');
+                numSpan.innerText = parseInt(numSpan.innerText) + 1;
+            });
+        }
+
+        function toggleComment(postId) {
+            const box = document.getElementById(`comment-box-${postId}`);
+            box.style.display = box.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function loadComments(postId) {
+            const query = Bmob.Query("Comment");
+            query.equalTo("post", "==", postId);
+            query.include("author");
+            query.order("createdAt");
+            const currentUser = Bmob.User.current();
+            query.find().then(comments => {
+                const div = document.getElementById(`c-list-${postId}`);
+                div.innerHTML = "";
+                comments.forEach(c => {
+                    const isAnon = c.isAnonymous;
+                    const nick = (isAnon || !c.author) ? "匿名" : (c.author.nickname || "路人");
+                    let delBtnHtml = "";
+                    if(currentUser && c.author && c.author.objectId === currentUser.objectId) {
+                        delBtnHtml = `<span class="del-comment-btn" onclick="deleteComment('${c.objectId}', '${postId}')">删除</span>`;
+                    }
+                    div.innerHTML += `<div class="comment-item"><span class="c-name">${nick}:</span> ${c.content} ${delBtnHtml}</div>`;
+                });
+            });
+        }
+
+        async function sendComment(postId) {
+            const user = Bmob.User.current();
+            if(!user) { alert("请登录后评论"); return; }
+            const input = document.getElementById(`c-input-${postId}`);
+            const isAnon = document.getElementById(`c-anon-${postId}`).checked;
+            const content = input.value.trim();
+            if(!content) return;
+
+            // ★★★ 3. 核心新增：检测评论内容 ★★★
+            if (typeof checkSensitive === 'function') {
+                const badComment = checkSensitive(content);
+                if (badComment) return showToast("评论包含违规词，无法发送");
+            }
+            // ★★★ 新增结束 ★★★
+
+            const query = Bmob.Query("Comment");
+            query.set("content", content);
+            query.set("post", Bmob.Pointer('LovePost').set(postId));
+            query.set("author", Bmob.Pointer('_User').set(user.objectId));
+            query.set("isAnonymous", isAnon);
+            await query.save();
+            input.value = "";
+            loadComments(postId); 
+        }
+
+        function showUser(userId) {
+            const mask = document.getElementById('userModalMask');
+            const modal = document.getElementById('userModal');
+            mask.style.display = 'block';
+            setTimeout(() => { modal.classList.add('show'); modal.style.display = 'block'; }, 10);
+            Bmob.Query("_User").get(userId).then(u => {
+                document.getElementById('mName').innerText = u.nickname || "未知用户";
+                document.getElementById('mDesc').innerText = u.desc || "这个用户很懒，什么都没写。";
+                document.getElementById('mAvatar').innerText = (u.nickname || "U").charAt(0).toUpperCase();
+            });
+        }
+
+        function closeUserModal() {
+            const mask = document.getElementById('userModalMask');
+            const modal = document.getElementById('userModal');
+            modal.classList.remove('show');
+            setTimeout(() => { modal.style.display = 'none'; mask.style.display = 'none'; }, 300);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerHTML = msg; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2000);
+        }
+    </script>
+</body>
+</html>
