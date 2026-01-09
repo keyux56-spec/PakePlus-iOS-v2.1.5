@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>登录 / 注册 - 惠德综合高中</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <script src="./Bmob-2.7.0.min.js"></script>
+    <script src="./config.js"></script>
+    <script src="./banned_words.js"></script>
+
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #6C5CE7, #a29bfe);
+            --bg-color: #f7f8fa;
+            --text-color: #333;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            background-color: var(--bg-color);
+            font-family: -apple-system, "SF Pro Text", sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; padding: 20px;
+            user-select: none; 
+        }
+
+        .auth-card {
+            background: white; width: 100%; max-width: 400px;
+            padding: 30px 25px; border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(108, 92, 231, 0.15);
+            animation: slideUp 0.5s ease;
+            position: relative; z-index: 1;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header { text-align: center; margin-bottom: 30px; }
+        .logo-icon { 
+            font-size: 40px; background: var(--primary-gradient); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+            margin-bottom: 10px; display: inline-block;
+        }
+        .title { font-size: 22px; font-weight: 800; color: #333; }
+        .subtitle { font-size: 14px; color: #999; margin-top: 5px; }
+
+        .tab-switch { display: flex; background: #f0f2f5; border-radius: 12px; padding: 4px; margin-bottom: 25px; }
+        .tab-btn {
+            flex: 1; padding: 10px; border: none; background: transparent;
+            border-radius: 10px; color: #777; font-weight: 600; font-size: 14px;
+            cursor: pointer; transition: 0.3s;
+        }
+        .tab-btn.active { background: white; color: #6C5CE7; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+        .input-group { margin-bottom: 18px; position: relative; }
+        .input-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #ccc; font-size: 16px; transition: 0.3s; }
+        .custom-input {
+            width: 100%; padding: 14px 14px 14px 45px;
+            border: 2px solid #f0f2f5; border-radius: 14px;
+            font-size: 15px; transition: 0.3s; background: #f9f9fc;
+        }
+        .custom-input:focus { background: white; border-color: #6C5CE7; }
+        .custom-input:focus + .input-icon { color: #6C5CE7; }
+
+        /* 注册专属区域控制 */
+        .register-only { display: none; }
+        .register-only.show { display: block; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* 协议勾选样式 */
+        .agreement-box {
+            margin: 10px 0 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .agreement-box label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 13px;
+            color: #888;
+            user-select: none;
+        }
+        .agreement-box input {
+            appearance: none; -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border: 2px solid #ddd; border-radius: 5px;
+            margin-right: 8px; position: relative;
+            transition: 0.2s; background: #fff; flex-shrink: 0;
+        }
+        .agreement-box input:checked { background-color: #6C5CE7; border-color: #6C5CE7; }
+        .agreement-box input:checked::after {
+            content: ''; position: absolute; left: 5px; top: 1px;
+            width: 4px; height: 9px; border: solid white;
+            border-width: 0 2px 2px 0; transform: rotate(45deg);
+        }
+        .agreement-box a { color: #6C5CE7; font-weight: 600; text-decoration: none; margin-left: 3px; }
+
+        .btn-submit {
+            width: 100%; padding: 16px; border: none; border-radius: 14px;
+            background: var(--primary-gradient); color: white;
+            font-size: 16px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 8px 20px rgba(108, 92, 231, 0.3);
+            transition: 0.2s; margin-top: 5px;
+        }
+        .btn-submit:active { transform: scale(0.96); }
+
+        .footer-link { text-align: center; margin-top: 20px; }
+        .footer-link a { color: #999; text-decoration: none; font-size: 13px; }
+
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 10px 20px;
+            border-radius: 20px; font-size: 14px; z-index: 999; display: none;
+        }
+
+        /* 协议弹窗样式 */
+        .modal-mask {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 2000; display: none;
+            align-items: center; justify-content: center; backdrop-filter: blur(3px);
+        }
+        .modal-box {
+            background: white; width: 85%; max-width: 340px;
+            border-radius: 20px; padding: 20px;
+            max-height: 75vh; display: flex; flex-direction: column;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .modal-title { font-size: 16px; font-weight: 800; text-align: center; margin-bottom: 15px; color: #333; }
+        
+        .modal-content { 
+            font-size: 13px; color: #555; line-height: 1.7; 
+            overflow-y: auto; margin-bottom: 15px; flex: 1; 
+            background: #f9f9f9; padding: 15px; border-radius: 12px;
+            text-align: left;
+        }
+        .modal-content h4 {
+            color: #333; margin: 15px 0 8px 0; font-size: 14px; font-weight: 800;
+            border-left: 4px solid #6C5CE7; padding-left: 8px;
+        }
+        .modal-content h4:first-child { margin-top: 0; }
+        .modal-content p { margin-bottom: 6px; text-align: justify; }
+        .modal-content strong { color: #FF4757; font-weight: 600; }
+        .p-title { font-weight: 600; color: #333; margin-bottom: 10px; }
+
+        .modal-btn {
+            width: 100%; padding: 12px; background: #6C5CE7; color: white;
+            border: none; border-radius: 12px; font-weight: 600; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toast" id="toast">提示信息</div>
+
+    <div class="auth-card">
+        <div class="header">
+            <i class="fas fa-school logo-icon"></i>
+            <div class="title">惠德综合高中</div>
+            <div class="subtitle">安全认证登录</div>
+        </div>
+
+        <div class="tab-switch">
+            <button class="tab-btn active" onclick="switchMode('login')" id="tabLogin">登录</button>
+            <button class="tab-btn" onclick="switchMode('register')" id="tabRegister">注册</button>
+        </div>
+
+        <div class="form-area">
+            <div class="input-group">
+                <input type="tel" id="phone" class="custom-input" placeholder="手机号码" maxlength="11">
+                <i class="fas fa-mobile-alt input-icon"></i>
+            </div>
+
+            <div class="input-group register-only" id="nickGroup">
+                <input type="text" id="nickname" class="custom-input" placeholder="昵称" maxlength="10">
+                <i class="fas fa-user-tag input-icon"></i>
+            </div>
+
+            <div class="input-group">
+                <input type="password" id="password" class="custom-input" placeholder="输入密码 (至少6位)">
+                <i class="fas fa-lock input-icon"></i>
+            </div>
+
+            <div class="agreement-box register-only" id="agreeGroup">
+                <label>
+                    <input type="checkbox" id="agreeCheck">
+                    <span>我已阅读并同意 <a onclick="showAgreement(event)">《用户协议与免责声明》</a></span>
+                </label>
+            </div>
+
+            <button class="btn-submit" id="btnSubmit" onclick="handleSubmit()">立即登录</button>
+        </div>
+
+        <div class="footer-link">
+            <a href="index.html">返回主页 <i class="fas fa-arrow-right"></i></a>
+        </div>
+    </div>
+
+    <div class="modal-mask" id="agreeModal">
+        <div class="modal-box">
+            <div class="modal-title">用户协议与免责声明</div>
+            <div class="modal-content">
+                <p class="p-title">欢迎使用“惠德校园”服务平台。为了保障您的权益，请在注册前务必仔细阅读以下条款，特别是涉及免责和风险提示的内容。</p>
+
+                <h4>一、总则</h4>
+                <p>1. 本平台是由本校学生自主开发的非官方校园服务工具，旨在便利同学生活，仅供校内交流使用。</p>
+                <p>2. 用户在平台上的所有行为必须遵守《中华人民共和国网络安全法》及学校相关校纪校规。</p>
+
+                <h4>二、各功能板块使用规范</h4>
+                <p><strong>1. 表白墙/校园圈：</strong></p>
+                <p>• 严禁发布侮辱、诽谤、造谣、人身攻击或侵犯他人隐私（如公开他人手机号、宿舍号）的内容。</p>
+                <p>• 禁止发布低俗、色情、暴力或暗示性的不良信息，违者封号。</p>
+                
+                <p><strong>2. 校园兼职：</strong></p>
+                <p>• 平台仅提供信息展示，<strong>不参与</strong>实际招聘与薪资发放。</p>
+                <p>• <strong>警惕诈骗：</strong>任何要求“先交押金”、“刷单”、“借用身份信息”的兼职均为诈骗，请立即举报。</p>
+
+                <p><strong>3. 跳蚤市场/闲置交易：</strong></p>
+                <p>• 平台不对商品的质量、真伪、新旧程度做任何担保。</p>
+                <p>• 建议同学们<strong>在校内公共场所当面交易</strong>，钱货两清。切勿私下先转账后发货。</p>
+                <p>• 交易产生的任何纠纷（如货不对板、退换货）由买卖双方自行协商解决，平台不承担法律责任。</p>
+
+                <p><strong>4. 游戏电竞/账号租赁：</strong></p>
+                <p>• 禁止在组队中出现谩骂、挂机等破坏游戏体验的行为。</p>
+                <p>• 涉及游戏账号交易/租赁属于高风险行为，如发生账号找回、封号等损失，平台无法协助追回。</p>
+
+                <p><strong>5. 学习资料/失物招领：</strong></p>
+                <p>• 上传资料请尊重版权，严禁传播考试作弊信息。</p>
+                <p>• 认领失物时请核实对方身份，谨防冒领。</p>
+
+                <h4>三、免责声明</h4>
+                <p>1. 因黑客攻击、服务器故障等不可抗力导致的数据丢失，开发者团队不承担赔偿责任。</p>
+                <p>2. 用户对其发布的言论和行为承担全部法律责任，平台有权配合学校或公安机关调查。</p>
+                <p>3. <strong>法律责任与纠纷处理：</strong>用户在本平台产生的一切违法违规行为（包括但不限于发布违法信息、侵犯他人权益）及与其他用户产生的任何纠纷（如交易纠纷、口角摩擦），均由用户自行承担全部法律责任，与平台开发者及维护团队无关。</p>
+            </div>
+            <button class="modal-btn" onclick="hideAgreement()">我已阅读并同意以上条款</button>
+        </div>
+    </div>
+
+    <script>
+        let isLoginMode = true;
+
+        function switchMode(mode) {
+            isLoginMode = (mode === 'login');
+            
+            // 切换 Tab 样式
+            document.getElementById('tabLogin').className = isLoginMode ? 'tab-btn active' : 'tab-btn';
+            document.getElementById('tabRegister').className = isLoginMode ? 'tab-btn' : 'tab-btn active';
+            
+            // 切换输入框显示状态
+            const els = document.querySelectorAll('.register-only');
+            els.forEach(el => {
+                el.className = isLoginMode ? 'input-group register-only' : 'input-group register-only show';
+                if(el.classList.contains('agreement-box')) {
+                    el.className = isLoginMode ? 'agreement-box register-only' : 'agreement-box register-only show';
+                }
+            });
+
+            document.getElementById('btnSubmit').innerText = isLoginMode ? "立即登录" : "立即注册";
+
+            // 如果切换到了注册模式，自动弹出协议
+            if (mode === 'register') {
+                setTimeout(() => {
+                    showAgreement(); 
+                }, 300);
+            }
+        }
+
+        // 显示协议弹窗
+        function showAgreement(e) {
+            if(e) e.preventDefault(); // 阻止 label 的默认点击
+            document.getElementById('agreeModal').style.display = 'flex';
+        }
+
+        // 关闭协议弹窗
+        function hideAgreement() {
+            document.getElementById('agreeModal').style.display = 'none';
+            // 既然读完了，顺便帮用户勾上
+            document.getElementById('agreeCheck').checked = true;
+        }
+
+        async function handleSubmit() {
+            const phone = document.getElementById('phone').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const nickname = document.getElementById('nickname').value.trim();
+
+            if (!/^1[3-9]\d{9}$/.test(phone)) return showToast("请输入正确的手机号");
+            if (password.length < 6) return showToast("密码长度至少6位");
+
+            // 注册模式下的额外检查
+            if (!isLoginMode) {
+                if (!nickname) return showToast("请填写昵称");
+
+                // ★★★ 核心新增：违禁词拦截逻辑 ★★★
+                // 确保 banned_words.js 已加载且函数存在
+                if (typeof checkSensitive === 'function') {
+                    const badWord = checkSensitive(nickname);
+                    if (badWord) {
+                        return showToast("昵称包含违禁词，请修改");
+                    }
+                }
+
+                // 检查是否勾选协议
+                const isAgreed = document.getElementById('agreeCheck').checked;
+                if (!isAgreed) {
+                    return showToast("请先阅读并勾选用户协议");
+                }
+            }
+
+            setLoading(true);
+
+            try {
+                if (isLoginMode) {
+                    // --- 登录逻辑 ---
+                    await Bmob.User.login(phone, password);
+                    showToast("登录成功！");
+                    setTimeout(() => window.location.href = "index.html", 800);
+                } else {
+                    // --- 注册逻辑 ---
+                    // 1. 先检查昵称是否重复
+                    const nickQuery = Bmob.Query("_User");
+                    nickQuery.equalTo("nickname", "==", nickname);
+                    const count = await nickQuery.count();
+                    if (count > 0) throw { error: "该昵称太火了，换一个吧" };
+
+                    // 2. 注册
+                    await Bmob.User.register({
+                        username: phone,
+                        password: password,
+                        nickname: nickname,
+                        mobilePhoneNumber: phone
+                    });
+                    showToast("注册并登录成功！");
+                    setTimeout(() => window.location.href = "index.html", 800);
+                }
+            } catch (err) {
+                console.error(err);
+                
+                let errMsg = err.error || "网络请求失败";
+                if(err.code === 202) errMsg = "该手机号已被注册";
+                if(err.code === 101) errMsg = "手机号或密码错误";
+                showToast("操作失败: " + errMsg);
+                setLoading(false);
+            }
+        }
+
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.innerText = msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 2500);
+        }
+
+        function setLoading(isLoading) {
+            const btn = document.getElementById('btnSubmit');
+            btn.disabled = isLoading;
+            if(isLoading) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
+            } else {
+                btn.innerText = isLoginMode ? "立即登录" : "立即注册";
+            }
+        }
+    </script>
+</body>
+</html>
