@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>校园兼职 - 惠德校园</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="./Bmob-2.7.0.min.js"></script>
+    <script src="./config.js"></script>
+    <script src="./banned_words.js"></script>
+    <style>
+        :root {
+            --primary: #007AFF; 
+            --primary-gradient: linear-gradient(135deg, #00C6FF, #0072FF);
+            --bg-color: #F2F2F7;
+            --text-main: #2F3542;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { background-color: var(--bg-color); font-family: -apple-system, "PingFang SC", sans-serif; color: var(--text-main); max-width: 600px; margin: 0 auto; padding-bottom: 80px; }
+        .nav-bar { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .nav-title { font-size: 18px; font-weight: 800; color: #2F3542; letter-spacing: -0.5px; }
+        .nav-back { color: #2F3542; font-size: 15px; text-decoration: none; font-weight: 600; display: flex; align-items: center; background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 20px; transition: 0.2s; }
+        .nav-back:active { transform: scale(0.95); }
+        .marquee-wrapper { padding: 15px 20px 5px 20px; }
+        .marquee-capsule { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); color: #1976D2; font-size: 12px; font-weight: 500; padding: 10px 15px; border-radius: 16px; display: flex; align-items: center; gap: 10px; overflow: hidden; border: 1px solid rgba(25, 118, 210, 0.15); box-shadow: 0 4px 15px rgba(33, 150, 243, 0.1); }
+        .marquee-icon { font-size: 16px; color: #1976D2; animation: pulse 2s infinite; flex-shrink: 0; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        .marquee-content { flex: 1; overflow: hidden; position: relative; height: 18px; }
+        .marquee-text { position: absolute; white-space: nowrap; animation: scroll 20s linear infinite; line-height: 18px; }
+        @keyframes scroll { 0% { transform: translateX(10%); } 100% { transform: translateX(-120%); } }
+        .feed-list { padding: 10px 15px; min-height: 60vh; }
+        .post-card { background: #fff; border-radius: 24px; padding: 20px; margin-bottom: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); animation: fadeInUp 0.5s ease; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .post-header { display: flex; align-items: center; margin-bottom: 12px; }
+        .p-avatar { width: 48px; height: 48px; border-radius: 50%; background: #F1F2F6; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #A4B0BE; margin-right: 12px; font-size: 20px; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .p-avatar.clickable { background: var(--primary-gradient); color: white; cursor: pointer; box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3); }
+        .p-info { flex: 1; }
+        .p-name { font-size: 16px; font-weight: 700; color: #2F3542; }
+        .p-time { font-size: 12px; color: #A4B0BE; margin-top: 3px; font-weight: 500; }
+        .tag-type { background: #E3F2FD; color: #007AFF; font-size: 10px; padding: 2px 6px; border-radius: 6px; margin-left: 6px; vertical-align: middle; font-weight: bold; }
+        .post-content { font-size: 15px; line-height: 1.7; color: #2F3542; margin-bottom: 15px; white-space: pre-wrap; font-weight: 400; }
+        .contact-box { background: #F8F9FA; border-left: 4px solid var(--primary); padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 15px; font-size: 14px; color: #333; display: flex; justify-content: space-between; align-items: center; }
+        .btn-copy { font-size: 12px; color: var(--primary); border: 1px solid var(--primary); padding: 4px 10px; border-radius: 12px; background: white; cursor: pointer; }
+        .btn-copy:active { background: var(--primary); color: white; }
+        .post-actions { border-top: 1px solid #F1F2F6; padding-top: 12px; display: flex; justify-content: flex-end; gap: 20px; }
+        .action-btn { color: #747D8C; font-size: 13px; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 12px; transition: 0.2s; background: #F7F8FA; font-weight: 600; }
+        .action-btn:active { transform: scale(0.95); }
+        .action-btn.liked { color: var(--primary); background: #E3F2FD; }
+        .btn-delete-post { color: #ccc; font-size: 14px; padding: 5px 10px; cursor: pointer; }
+        .comment-section { background: #F7F8FA; margin-top: 15px; padding: 15px; border-radius: 16px; display: none; }
+        .comment-item { font-size: 13px; margin-bottom: 8px; color: #57606F; line-height: 1.5; }
+        .c-name { font-weight: 700; color: #2F3542; margin-right: 4px; }
+        .del-comment-btn { font-size: 11px; color: var(--primary); margin-left: 8px; cursor: pointer; text-decoration: underline; opacity: 0.7; }
+        .comment-input-box { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
+        .c-input { flex: 1; border: none; padding: 10px; border-radius: 12px; font-size: 13px; outline: none; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+        .c-btn { background: #2F3542; color: white; border: none; padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .fab-btn { position: fixed; bottom: 30px; right: 25px; width: 60px; height: 60px; background: var(--primary-gradient); border-radius: 50%; box-shadow: 0 10px 25px rgba(0, 122, 255, 0.4); display: flex; align-items: center; justify-content: center; color: white; font-size: 30px; cursor: pointer; z-index: 900; transition: transform 0.2s; }
+        .fab-btn:active { transform: scale(0.9) rotate(90deg); }
+        .sheet-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(3px); }
+        .sheet-modal { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; border-radius: 30px 30px 0 0; padding: 25px; z-index: 1001; transform: translateY(100%); transition: 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); max-width: 600px; left: 50%; margin-left: -50%; }
+        @media (min-width: 600px) { .sheet-modal { margin-left: -300px; } }
+        .sheet-modal.show { transform: translateY(0); }
+        .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .sheet-title { font-size: 18px; font-weight: 800; }
+        .sheet-close { font-size: 24px; color: #ccc; cursor: pointer; }
+        .input-group { margin-bottom: 15px; }
+        .select-type { width: 100%; padding: 12px; border: 2px solid #F1F2F6; border-radius: 12px; background: #fff; font-size: 14px; outline: none; }
+        .input-contact { width: 100%; padding: 12px; border: 2px solid #F1F2F6; border-radius: 12px; background: #fff; font-size: 14px; outline: none; }
+        .input-area { width: 100%; border: none; background: #F1F2F6; border-radius: 16px; padding: 15px; font-size: 15px; resize: none; height: 120px; font-family: inherit; color: #2F3542; }
+        .input-area:focus, .input-contact:focus, .select-type:focus { border-color: var(--primary); background: #fff; }
+        .sheet-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+        .switch-label { font-size: 14px; color: #747D8C; display: flex; align-items: center; gap: 6px; }
+        .switch-label input { accent-color: var(--primary); width: 18px; height: 18px; }
+        .btn-send { background: var(--primary-gradient); color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3); }
+        .user-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); width: 80%; max-width: 320px; background: rgba(255,255,255,0.95); border-radius: 24px; padding: 30px 20px; text-align: center; z-index: 2001; display: none; box-shadow: 0 20px 60px rgba(0,0,0,0.2); transition: 0.3s; }
+        .user-modal.show { transform: translate(-50%, -50%) scale(1); }
+        .m-avatar { width: 70px; height: 70px; background: var(--primary-gradient); color: white; border-radius: 50%; margin: 0 auto 15px; line-height: 70px; font-size: 28px; border: 3px solid #fff; box-shadow: 0 8px 20px rgba(0, 122, 255, 0.3); }
+        .m-name { font-size: 20px; font-weight: 800; margin-bottom: 12px; }
+        .m-desc { font-size: 14px; color: #747D8C; background: #F1F2F6; padding: 15px; border-radius: 16px; }
+        .m-close { margin-top: 25px; color: #fff; background: #2F3542; border: none; font-size: 14px; padding: 10px 30px; border-radius: 20px; font-weight: bold; }
+        .toast { position: fixed; top: 50%; left: 50%; transform: translateX(-50%); background: rgba(47, 53, 66, 0.9); color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; z-index: 3000; display: none; }
+    </style>
+</head>
+<body>
+    <div class="toast" id="toast">提示</div>
+    <div class="nav-bar">
+        <a href="index.html" class="nav-back"><i class="fas fa-arrow-left" style="margin-right:6px;"></i> 返回</a>
+        <div class="nav-title">校园兼职</div>
+        <div style="width: 60px;"></div>
+    </div>
+    <div class="marquee-wrapper">
+        <div class="marquee-capsule">
+            <i class="fas fa-user-shield marquee-icon"></i> 
+            <div class="marquee-content">
+                <div class="marquee-text">警惕兼职陷阱：凡是要求交押金、刷单、试玩的都是诈骗！请务必核实对方身份，保护个人隐私。</div>
+            </div>
+        </div>
+    </div>
+    <div class="feed-list" id="feedList">
+        <div style="padding:40px 20px; text-align:center; color:#A4B0BE;">
+            <i class="fas fa-spinner fa-spin"></i> 正在加载最新兼职...
+        </div>
+    </div>
+    <div class="fab-btn" onclick="openPublishSheet()"><i class="fas fa-plus"></i></div>
+    <div class="sheet-mask" id="sheetMask" onclick="closePublishSheet()"></div>
+    <div class="sheet-modal" id="sheetModal">
+        <div class="sheet-header">
+            <div class="sheet-title">发布兼职/求职</div>
+            <i class="fas fa-times sheet-close" onclick="closePublishSheet()"></i>
+        </div>
+        <div class="input-group" style="display:flex; gap:10px;">
+            <select id="postType" class="select-type">
+                <option value="兼职">兼职</option>
+                <option value="全职">全职</option>
+                <option value="家教">家教</option>
+                <option value="求职">求职</option>
+                <option value="其他">其他</option>
+            </select>
+            <input type="text" id="postContact" class="input-contact" placeholder="联系方式 (微信/手机)">
+        </div>
+        <textarea id="postContent" class="input-area" placeholder="描述工作内容、薪资待遇..."></textarea>
+        <div class="sheet-footer">
+            <label class="switch-label"><input type="checkbox" id="isAnonymous"> <i class="fas fa-mask"></i> 匿名发布</label>
+            <button class="btn-send" onclick="submitPost()" id="btnPub">发布</button>
+        </div>
+    </div>
+    <div class="sheet-mask" id="userModalMask" onclick="closeUserModal()"></div>
+    <div class="user-modal" id="userModal">
+        <div class="m-avatar" id="mAvatar">U</div>
+        <div class="m-name" id="mName">User</div>
+        <div class="m-desc" id="mDesc">暂无简介</div>
+        <button class="m-close" onclick="closeUserModal()">关闭</button>
+    </div>
+    <script>
+        window.onload = () => loadPosts();
+        function openPublishSheet() {
+            const user = Bmob.User.current();
+            if(!user) { if(confirm("发布需要登录，去登录吗？")) location.href="login.html"; return; }
+            const mask = document.getElementById('sheetMask');
+            const modal = document.getElementById('sheetModal');
+            mask.style.display = 'block';
+            setTimeout(() => { mask.style.opacity = 1; modal.classList.add('show'); }, 10);
+        }
+        function closePublishSheet() {
+            const mask = document.getElementById('sheetMask');
+            const modal = document.getElementById('sheetModal');
+            modal.classList.remove('show');
+            mask.style.opacity = 0;
+            setTimeout(() => { mask.style.display = 'none'; }, 300);
+        }
+
+        async function submitPost() {
+            const user = Bmob.User.current();
+            const type = document.getElementById('postType').value;
+            const contact = document.getElementById('postContact').value.trim();
+            const content = document.getElementById('postContent').value.trim();
+            const isAnonymous = document.getElementById('isAnonymous').checked;
+            const btn = document.getElementById('btnPub');
+
+            if(!contact || !content) return showToast("请填写完整信息");
+
+            // ★★★ 2. 核心新增：检测发布内容的违禁词 ★★★
+            if (typeof checkSensitive === 'function') {
+                const badContent = checkSensitive(content);
+                if (badContent) return showToast("内容包含违规词，无法发布");
+                
+                const badContact = checkSensitive(contact);
+                if (badContact) return showToast("联系方式包含违禁词");
+            }
+            // ★★★ 新增结束 ★★★
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            try {
+                const canPost = await checkLimit(user.objectId);
+                if(!canPost) { btn.disabled = false; btn.innerHTML = '发布'; return; }
+                const query = Bmob.Query("JobPost");
+                query.set("type", type);
+                query.set("contact", contact);
+                query.set("content", content);
+                query.set("author", Bmob.Pointer('_User').set(user.objectId));
+                query.set("isAnonymous", isAnonymous);
+                query.set("likes", 0);
+                await query.save();
+                showToast("发布成功");
+                document.getElementById('postContent').value = "";
+                closePublishSheet();
+                loadPosts();
+            } catch(e) {
+                showToast("发布失败");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '发布';
+            }
+        }
+
+        async function checkLimit(userId) {
+            const now = new Date();
+            const todayStart = new Date(now.setHours(0,0,0,0)).toISOString();
+            const q = Bmob.Query("JobPost");
+            q.equalTo("author", "==", userId);
+            q.equalTo("createdAt", ">=", todayStart);
+            const count = await q.count();
+            if(count >= 2) { alert("每天限发 2 条兼职信息"); return false; }
+            return true;
+        }
+
+        function loadPosts() {
+            const query = Bmob.Query("JobPost");
+            query.include("author");
+            query.order("-createdAt");
+            const currentUser = Bmob.User.current();
+            query.find().then(res => {
+                const list = document.getElementById('feedList');
+                list.innerHTML = res.length ? "" : '<div style="text-align:center;padding:50px;color:#ccc;">暂无信息</div>';
+                res.forEach(post => {
+                    const isAnon = post.isAnonymous;
+                    const author = post.author || {};
+                    const nick = isAnon ? "匿名用户" : (author.nickname || "校园用户");
+                    const avatar = isAnon ? "?" : nick.charAt(0).toUpperCase();
+                    const showDel = currentUser && author.objectId === currentUser.objectId;
+                    list.innerHTML += `
+                        <div class="post-card" id="card-${post.objectId}">
+                            <div class="post-header">
+                                <div class="p-avatar ${!isAnon?'clickable':''}" onclick="${!isAnon?`showUser('${author.objectId}')`:''}">
+                                    ${avatar}
+                                </div>
+                                <div class="p-info">
+                                    <div class="p-name">${nick} <span class="tag-type">${post.type}</span></div>
+                                    <div class="p-time">${post.createdAt.substring(5,10)}</div>
+                                </div>
+                                ${showDel ? `<i class="fas fa-trash-alt btn-delete-post" onclick="deletePost('${post.objectId}')"></i>` : ""}
+                            </div>
+                            <div class="post-content">${post.content}</div>
+                            <div class="contact-box">
+                                <span><i class="fas fa-phone-alt"></i> ${post.contact}</span>
+                                <button class="btn-copy" onclick="copyText('${post.contact}')">复制</button>
+                            </div>
+                            <div class="post-actions">
+                                <button class="action-btn" onclick="addLike(this, '${post.objectId}')"><i class="far fa-star"></i> <span>${post.likes||0}</span> 收藏</button>
+                                <button class="action-btn" onclick="toggleComment('${post.objectId}')"><i class="far fa-comment"></i> 咨询</button>
+                            </div>
+                            <div class="comment-section" id="comment-box-${post.objectId}">
+                                <div id="c-list-${post.objectId}"></div>
+                                <div class="comment-input-box">
+                                    <input type="text" class="c-input" id="c-input-${post.objectId}" placeholder="咨询一下...">
+                                    <button class="c-btn" onclick="sendComment('${post.objectId}')">发送</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    loadComments(post.objectId);
+                });
+            });
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => showToast("已复制联系方式")).catch(() => showToast("复制失败"));
+        }
+        function deletePost(id) {
+            if(!confirm("确认删除？")) return;
+            Bmob.Query("JobPost").destroy(id).then(() => {
+                showToast("已删除");
+                document.getElementById('card-'+id).remove();
+            });
+        }
+        function addLike(btn, id) {
+            const icon = btn.querySelector('i');
+            if(icon.classList.contains('fas')) return;
+            Bmob.Query("JobPost").get(id).then(post => {
+                post.increment("likes");
+                post.save();
+                btn.classList.add('liked');
+                icon.classList.replace('far','fas');
+                const span = btn.querySelector('span');
+                span.innerText = parseInt(span.innerText) + 1;
+            });
+        }
+        function toggleComment(id) {
+            const box = document.getElementById(`comment-box-${id}`);
+            box.style.display = box.style.display === 'block' ? 'none' : 'block';
+        }
+        function loadComments(postId) {
+            const query = Bmob.Query("Comment");
+            query.equalTo("post", "==", Bmob.Pointer('JobPost').set(postId));
+            query.include("author");
+            query.order("createdAt");
+            const curr = Bmob.User.current();
+            query.find().then(res => {
+                const div = document.getElementById(`c-list-${postId}`);
+                div.innerHTML = "";
+                res.forEach(c => {
+                    const nick = c.author ? c.author.nickname : "匿名";
+                    const isOwn = curr && c.author && c.author.objectId === curr.objectId;
+                    div.innerHTML += `<div class="comment-item"><span class="c-name">${nick}:</span> ${c.content} ${isOwn?`<span class="del-comment-btn" onclick="deleteComment('${c.objectId}','${postId}')">删除</span>`:""}</div>`;
+                });
+            });
+        }
+
+        async function sendComment(postId) {
+            const user = Bmob.User.current();
+            if(!user) return alert("请先登录");
+            const input = document.getElementById(`c-input-${postId}`);
+            const val = input.value.trim();
+            if(!val) return;
+
+            // ★★★ 3. 核心新增：检测评论内容的违禁词 ★★★
+            if (typeof checkSensitive === 'function') {
+                const badComment = checkSensitive(val);
+                if (badComment) return showToast("评论包含违禁词，无法发送");
+            }
+            // ★★★ 新增结束 ★★★
+
+            const query = Bmob.Query("Comment");
+            query.set("content", val);
+            query.set("post", Bmob.Pointer('JobPost').set(postId));
+            query.set("author", Bmob.Pointer('_User').set(user.objectId));
+            await query.save();
+            input.value = "";
+            loadComments(postId);
+        }
+
+        function showUser(id) {
+            const mask = document.getElementById('userModalMask');
+            const modal = document.getElementById('userModal');
+            mask.style.display = 'block';
+            Bmob.Query("_User").get(id).then(u => {
+                document.getElementById('mName').innerText = u.nickname || "同学";
+                document.getElementById('mDesc').innerText = u.desc || "暂无简介";
+                document.getElementById('mAvatar').innerText = (u.nickname || "U").charAt(0).toUpperCase();
+                setTimeout(() => { modal.classList.add('show'); modal.style.display = 'block'; }, 10);
+            });
+        }
+        function closeUserModal() {
+            document.getElementById('userModal').classList.remove('show');
+            setTimeout(() => { document.getElementById('userModal').style.display = 'none'; document.getElementById('userModalMask').style.display = 'none'; }, 300);
+        }
+        function deleteComment(id, pid) {
+            if(confirm("删除评论？")) Bmob.Query("Comment").destroy(id).then(() => loadComments(pid));
+        }
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2000);
+        }
+    </script>
+</body>
+</html>
