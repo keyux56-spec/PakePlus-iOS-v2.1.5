@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>惠德开黑 - 寻找队友</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="./Bmob-2.7.0.min.js"></script>
+    <script src="./config.js"></script>
+    <script src="./banned_words.js"></script>
+    <style>
+        :root {
+            --bg-color: #F5F6FA;
+            --accent: #6C5CE7;
+            --game-gradient: linear-gradient(135deg, #2d3436, #000000);
+            --card-bg: #FFFFFF;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-color); font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; padding-bottom: 80px; max-width: 600px; margin: 0 auto; }
+        
+        .navbar {
+            background: var(--game-gradient);
+            color: white;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .nav-title { font-weight: 800; font-size: 18px; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; }
+        .back-btn { color: white; font-size: 18px; cursor: pointer; padding-right: 15px; }
+
+        .game-tabs {
+            display: flex;
+            padding: 15px;
+            gap: 12px;
+            overflow-x: auto;
+            background: white;
+            scrollbar-width: none;
+        }
+        .game-tabs::-webkit-scrollbar { display: none; }
+        .tab-item {
+            padding: 8px 16px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            white-space: nowrap;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .tab-item.active { background: #2d3436; color: #fab1a0; box-shadow: 0 4px 10px rgba(45, 52, 54, 0.3); }
+
+        .post-list { padding: 15px; }
+        .game-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            position: relative;
+            border-left: 4px solid #dfe6e9;
+        }
+        .game-card[data-game="王者荣耀"] { border-left-color: #e17055; }
+        .game-card[data-game="和平精英"] { border-left-color: #0984e3; }
+        .game-card[data-game="三角洲"] { border-left-color: #00b894; }
+
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .u-avatar { width: 36px; height: 36px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #555; font-size: 14px; }
+        .u-name { font-size: 14px; font-weight: 700; color: #333; }
+        .u-time { font-size: 11px; color: #999; margin-top: 2px; }
+        
+        .game-tag {
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #eee;
+            font-weight: bold;
+            color: #555;
+        }
+        .rank-badge {
+            background: linear-gradient(45deg, #fab1a0, #e17055);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        .card-content { font-size: 14px; color: #444; line-height: 1.5; margin-bottom: 12px; }
+        
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #f0f0f0;
+            padding-top: 10px;
+        }
+        /* 修改后的按钮样式 */
+        .contact-btn {
+            background: #f1f2f6;
+            color: #2d3436;
+            border: 1px solid #ddd;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+        .contact-btn:active { background: #dfe6e9; transform: scale(0.96); }
+        .delete-btn { color: #ff7675; font-size: 12px; cursor: pointer; }
+
+        .fab {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 56px;
+            height: 56px;
+            background: var(--game-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: 0.3s;
+            z-index: 900;
+        }
+        .fab:active { transform: scale(0.9); }
+
+        /* 通用模态框样式 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            display: none; 
+            align-items: flex-end; 
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+        .modal-box {
+            background: white; 
+            width: 100%; max-width: 600px;
+            border-radius: 24px 24px 0 0; 
+            padding: 25px 25px 40px 25px;
+            animation: slideUp 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        /* ⬇️ 新增：联系方式弹窗的特定样式 */
+        .contact-display-box {
+            background: #F8F9FA;
+            border: 2px dashed #CBD5E0;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 24px;
+            font-weight: 800;
+            color: #2D3748;
+            letter-spacing: 1px;
+            user-select: text; /* 允许用户长按选中 */
+            -webkit-user-select: text;
+        }
+        .contact-tip { font-size: 12px; color: #999; text-align: center; margin-bottom: 5px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; font-size: 12px; font-weight: 700; color: #666; margin-bottom: 6px; }
+        .form-select, .form-input, .form-area {
+            width: 100%; padding: 10px; border: 1px solid #ddd;
+            border-radius: 10px; background: #f9f9f9; outline: none; font-size: 14px;
+        }
+        .btn-submit {
+            width: 100%; background: #2d3436; color: white;
+            padding: 12px; border: none; border-radius: 12px;
+            font-weight: bold; font-size: 15px; margin-top: 10px;
+            cursor: pointer;
+        }
+
+        #toast {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 12px 24px;
+            border-radius: 8px; font-size: 14px; z-index: 2000; display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast"></div>
+
+    <div class="navbar">
+        <div class="back-btn" onclick="history.back()"><i class="fas fa-arrow-left"></i></div>
+        <div class="nav-title"><i class="fas fa-gamepad"></i> 惠德开黑大厅</div>
+        <div style="width: 20px;"></div>
+    </div>
+
+    <div class="game-tabs">
+        <div class="tab-item active" onclick="filterGame('all', this)">全部</div>
+        <div class="tab-item" onclick="filterGame('王者荣耀', this)">王者荣耀</div>
+        <div class="tab-item" onclick="filterGame('和平精英', this)">和平精英</div>
+        <div class="tab-item" onclick="filterGame('英雄联盟', this)">三角洲</div>
+        <div class="tab-item" onclick="filterGame('原神', this)">暗区突围</div>
+        <div class="tab-item" onclick="filterGame('其他', this)">其他</div>
+    </div>
+
+    <div class="post-list" id="postContainer">
+        <div style="text-align:center; margin-top:50px; color:#999; font-size:14px;">加载中...</div>
+    </div>
+
+    <div class="fab" onclick="openModal()"><i class="fas fa-plus"></i></div>
+
+    <div class="modal-overlay" id="pubModal">
+        <div class="modal-box">
+            <h3 style="margin-bottom:20px; text-align:center;">发布开黑召集</h3>
+            <div class="form-group">
+                <label class="form-label">选择游戏</label>
+                <select id="selGame" class="form-select">
+                    <option value="王者荣耀">王者荣耀</option>
+                    <option value="和平精英">和平精英</option>
+                    <option value="英雄联盟">三角洲</option>
+                    <option value="原神">暗区突围</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">当前段位 / 等级</label>
+                <input type="text" id="iptRank" class="form-input" placeholder="例如：王者20星 / 钻石III">
+            </div>
+            <div class="form-group">
+                <label class="form-label">详细描述</label>
+                <textarea id="iptDesc" class="form-area" rows="3" placeholder="缺辅助，来个麦清晰的..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">联系方式 (QQ/微信)</label>
+                <input type="text" id="iptContact" class="form-input" placeholder="输入账号，方便复制">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-submit" style="background:#eee; color:#333;" onclick="closeModal('pubModal')">取消</button>
+                <button class="btn-submit" onclick="submitPost()">发布</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="contactModal">
+        <div class="modal-box" style="text-align: center;">
+            <h3 style="margin-bottom:10px;">联系方式</h3>
+            <p class="contact-tip">长按下方文字可手动复制，或点击按钮</p>
+            
+            <div class="contact-display-box" id="showContactText">
+                </div>
+
+            <div style="display:flex; gap:10px;">
+                <button class="btn-submit" style="background:#eee; color:#333;" onclick="closeModal('contactModal')">关闭</button>
+                <button class="btn-submit" onclick="doRealCopy()">一键复制</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFilter = 'all';
+
+        window.onload = function() {
+            loadPosts();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 1500);
+        }
+
+        function filterGame(game, el) {
+            currentFilter = game;
+            document.querySelectorAll('.tab-item').forEach(d => d.classList.remove('active'));
+            el.classList.add('active');
+            loadPosts();
+        }
+
+        function openModal() {
+            const user = Bmob.User.current();
+            if(!user) return showToast("请先在主页登录");
+            document.getElementById('pubModal').style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // ⬇️ 新增：打开联系方式弹窗
+        function openContactModal(contactStr) {
+            document.getElementById('showContactText').innerText = contactStr;
+            document.getElementById('contactModal').style.display = 'flex';
+        }
+
+        // ⬇️ 新增：执行复制
+        function doRealCopy() {
+            const str = document.getElementById('showContactText').innerText;
+            // 尝试使用 Clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(str).then(() => {
+                    showToast("复制成功！");
+                    closeModal('contactModal');
+                }).catch(() => {
+                    showToast("请长按文字手动复制");
+                });
+            } else {
+                // 备用方案：创建一个输入框来复制
+                const textArea = document.createElement("textarea");
+                textArea.value = str;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast("复制成功！");
+                    closeModal('contactModal');
+                } catch (err) {
+                    showToast("请长按文字手动复制");
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+
+        async function submitPost() {
+            const user = Bmob.User.current();
+            const game = document.getElementById('selGame').value;
+            const rank = document.getElementById('iptRank').value.trim();
+            const desc = document.getElementById('iptDesc').value.trim();
+            const contact = document.getElementById('iptContact').value.trim();
+
+            if(!rank || !desc || !contact) return showToast("请填写完整信息");
+
+            if (typeof checkSensitive === 'function') {
+                if (checkSensitive(rank) || checkSensitive(desc)) {
+                    return showToast("内容包含违禁词，请重新输入");
+                }
+            }
+
+            const query = Bmob.Query('GamePost');
+            query.set("username", user.nickname || user.username);
+            query.set("game", game);
+            query.set("rank", rank);
+            query.set("desc", desc);
+            query.set("contact", contact);
+            
+            const pointer = {
+                "__type": "Pointer",
+                "className": "_User",
+                "objectId": user.objectId
+            };
+            query.set("userObj", pointer);
+
+            try {
+                await query.save();
+                showToast("发布成功");
+                closeModal('pubModal');
+                document.getElementById('iptDesc').value = '';
+                document.getElementById('iptRank').value = '';
+                document.getElementById('iptContact').value = '';
+                loadPosts();
+            } catch(e) {
+                console.error("发布失败详情:", e); 
+                showToast("发布失败: " + (e.error || e.message));
+            }
+        }
+
+        async function loadPosts() {
+            const q = Bmob.Query("GamePost");
+            q.order("-createdAt");
+            if(currentFilter !== 'all') {
+                q.equalTo("game", "==", currentFilter);
+            }
+            q.limit(20);
+            
+            try {
+                const res = await q.find();
+                const container = document.getElementById('postContainer');
+                
+                if(res.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; margin-top:50px; color:#ccc;">暂无该游戏招募</div>';
+                    return;
+                }
+
+                const currentUser = Bmob.User.current();
+                let html = '';
+                
+                res.forEach(item => {
+                    const authorId = item.userObj ? item.userObj.objectId : "";
+                    const isMine = currentUser && (authorId === currentUser.objectId);
+                    const firstChar = (item.username || "U").charAt(0).toUpperCase();
+                    
+                    html += `
+                    <div class="game-card" data-game="${item.game}">
+                        <div class="card-header">
+                            <div class="user-info">
+                                <div class="u-avatar">${firstChar}</div>
+                                <div>
+                                    <div class="u-name">
+                                        ${item.username} 
+                                        <span class="rank-badge">${item.rank}</span>
+                                    </div>
+                                    <div class="u-time">${item.createdAt.split(' ')[0]}</div>
+                                </div>
+                            </div>
+                            <div class="game-tag">${item.game}</div>
+                        </div>
+                        <div class="card-content">${item.desc}</div>
+                        <div class="card-footer">
+                            <button class="contact-btn" onclick="openContactModal('${item.contact}')">
+                                <i class="far fa-address-card"></i> 查看联系方式
+                            </button>
+                            ${isMine ? `<div class="delete-btn" onclick="delPost('${item.objectId}')">删除</div>` : ''}
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        async function delPost(id) {
+            if(!confirm("确定删除这条信息吗？")) return;
+            const q = Bmob.Query("GamePost");
+            try {
+                await q.destroy(id);
+                showToast("已删除");
+                loadPosts();
+            } catch(e) {
+                showToast("删除失败");
+            }
+        }
+    </script>
+</body>
+</html>
