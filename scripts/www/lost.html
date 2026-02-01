@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>失物招领</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <script src="./Bmob-2.7.0.min.js"></script>
+    <script src="./config.js"></script>
+    <script src="./banned_words.js"></script>
+    
+    <style>
+        :root {
+            --bg-body: #F5F6F8;
+            --primary: #FF9F43; /* 寻物主色 */
+            --secondary: #2ECC71; /* 招领主色 */
+            --text-dark: #2d3436;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { background-color: var(--bg-body); font-family: -apple-system, sans-serif; padding-bottom: 80px; color: var(--text-dark); }
+
+        /* 顶部导航 */
+        .navbar {
+            position: fixed; top: 0; width: 100%; height: 50px;
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+            z-index: 100; display: flex; align-items: center; justify-content: center;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .back-btn { position: absolute; left: 15px; font-size: 18px; color: #333; cursor: pointer; padding: 10px; }
+        .nav-title { font-size: 16px; font-weight: 700; }
+
+        /* 筛选栏 */
+        .filter-tabs {
+            position: fixed; top: 50px; width: 100%; height: 50px;
+            background: #fff; z-index: 99; display: flex; align-items: center;
+            justify-content: center; gap: 15px; padding: 0 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+        .tab {
+            padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;
+            color: #999; background: #f5f5f5; cursor: pointer; transition: 0.3s;
+        }
+        .tab.active { background: #333; color: #fff; }
+        .tab.active[data-type="寻物"] { background: var(--primary); }
+        .tab.active[data-type="招领"] { background: var(--secondary); }
+
+        /* 列表容器 */
+        .list-container { margin-top: 110px; padding: 15px; min-height: 60vh; }
+
+        /* 卡片样式 */
+        .card {
+            background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03); position: relative;
+            transition: transform 0.2s; cursor: pointer;
+        }
+        .card:active { transform: scale(0.98); }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .tag { font-size: 12px; padding: 3px 8px; border-radius: 6px; font-weight: 700; color: #fff; }
+        .tag.lost { background: var(--primary); }
+        .tag.found { background: var(--secondary); }
+        
+        .time { font-size: 12px; color: #ccc; }
+
+        .card-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 6px; }
+        .card-desc { 
+            font-size: 14px; color: #666; line-height: 1.5; 
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        
+        .card-footer {
+            margin-top: 12px; padding-top: 10px; border-top: 1px dashed #eee;
+            display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999;
+        }
+        .author-info { display: flex; align-items: center; gap: 5px; }
+        .author-info i { color: #ccc; }
+
+        /* 悬浮发布按钮 */
+        .fab {
+            position: fixed; bottom: 30px; right: 20px;
+            width: 54px; height: 54px; background: #333;
+            border-radius: 50%; color: #fff; font-size: 22px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3); z-index: 200; cursor: pointer;
+        }
+
+        /* 弹窗通用 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 500; display: none;
+            backdrop-filter: blur(3px); opacity: 0; transition: 0.3s;
+        }
+        .modal-overlay.show { opacity: 1; }
+
+        /* ★★ 修改点 1：底部弹窗样式优化，防止键盘遮挡 ★★ */
+        .bottom-sheet {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: #fff; border-radius: 24px 24px 0 0;
+            padding: 25px; z-index: 501;
+            transform: translateY(100%); transition: 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            
+            /* 新增属性：限制高度并允许滚动 */
+            max-height: 85vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .bottom-sheet.show { transform: translateY(0); }
+
+        /* 表单样式 */
+        .form-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; text-align: center; }
+        .input-group { margin-bottom: 15px; }
+        
+        .radio-group { display: flex; gap: 15px; margin-bottom: 15px; }
+        .radio-group input[type="radio"] { display: none; }
+        
+        .radio-label {
+            flex: 1; text-align: center; padding: 12px; background: #f5f5f5;
+            border-radius: 12px; color: #666; font-weight: 600; cursor: pointer;
+            border: 2px solid transparent; transition: 0.2s;
+        }
+        
+        input[type="radio"]:checked + .radio-label.r-lost {
+            background: #fff5e6; color: var(--primary); border-color: var(--primary);
+        }
+        input[type="radio"]:checked + .radio-label.r-found {
+            background: #e8f8f0; color: var(--secondary); border-color: var(--secondary);
+        }
+
+        .inp {
+            width: 100%; padding: 14px; background: #f9f9f9; border: 1px solid #eee;
+            border-radius: 12px; font-size: 14px; outline: none;
+        }
+        .inp:focus { background: #fff; border-color: #333; }
+        textarea.inp { height: 100px; resize: none; }
+
+        .btn-submit {
+            width: 100%; padding: 14px; background: #333; color: #fff;
+            border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+            margin-top: 10px; cursor: pointer;
+        }
+        
+        .btn-delete {
+            width: 100%; padding: 14px; background: #FF4757; color: #fff;
+            border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+            margin-top: 10px; cursor: pointer;
+        }
+
+        /* 详情弹窗 */
+        .detail-box .d-tag { display: inline-block; padding: 4px 10px; border-radius: 6px; color: white; font-weight: bold; font-size: 12px; margin-bottom: 10px; }
+        .detail-box .d-title { font-size: 20px; font-weight: 800; margin-bottom: 10px; color: #333; }
+        .detail-box .d-desc { font-size: 15px; color: #555; line-height: 1.6; margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 12px; }
+        .contact-row { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 2px solid #f0f0f0; padding: 15px; border-radius: 12px; }
+        .c-label { font-size: 12px; color: #999; }
+        .c-val { font-size: 18px; font-weight: 800; color: #333; }
+        .btn-copy { padding: 8px 15px; background: #eee; border-radius: 8px; font-size: 12px; font-weight: bold; color: #333; cursor: pointer; }
+
+        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: 600; display: none; z-index: 2000; }
+        
+        .limit-hint { font-size: 12px; color: #999; text-align: center; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div id="toast"></div>
+
+    <div class="navbar">
+        <div class="back-btn" onclick="history.back()"><i class="fas fa-chevron-left"></i></div>
+        <div class="nav-title">失物招领</div>
+    </div>
+
+    <div class="filter-tabs">
+        <div class="tab active" onclick="switchTab('all', this)">全部</div>
+        <div class="tab" data-type="寻物" onclick="switchTab('寻物', this)">寻物启事</div>
+        <div class="tab" data-type="招领" onclick="switchTab('招领', this)">失物招领</div>
+    </div>
+
+    <div class="list-container" id="listContainer">
+        <div style="text-align:center; padding:50px; color:#ccc;">
+            <i class="fas fa-spinner fa-spin"></i> 加载中...
+        </div>
+    </div>
+
+    <div class="fab" onclick="openPost()"><i class="fas fa-plus"></i></div>
+
+    <div class="modal-overlay" id="overlay" onclick="closeAll()"></div>
+
+    <div class="bottom-sheet" id="postSheet">
+        <div class="form-title">发布信息</div>
+        <p class="limit-hint">⚠️ 每天限发 2 条失物/招领信息</p> 
+        <div class="radio-group">
+            <input type="radio" id="type_lost" name="p_type" value="寻物" checked>
+            <label for="type_lost" class="radio-label r-lost">我是失主 (寻物)</label>
+            
+            <input type="radio" id="type_found" name="p_type" value="招领">
+            <label for="type_found" class="radio-label r-found">我是捡主 (招领)</label>
+        </div>
+
+        <div class="input-group">
+            <input type="text" class="inp" id="p_title" placeholder="物品名称 (如: 黑色雨伞)">
+        </div>
+        <div class="input-group">
+            <textarea class="inp" id="p_content" placeholder="详细描述 (时间、地点、特征)..."></textarea>
+        </div>
+        <div class="input-group">
+            <input type="text" class="inp" id="p_contact" placeholder="联系方式 (手机/微信/QQ)">
+        </div>
+
+        <button class="btn-submit" id="btnPub" onclick="submitPost()">确认发布</button>
+    </div>
+
+    <div class="bottom-sheet detail-box" id="detailSheet">
+        <div id="detailContent"></div>
+        <div id="deleteBtnArea"></div>
+        <button class="btn-submit" onclick="closeAll()" style="background:#f5f5f5; color:#666; margin-top:15px;">关闭</button>
+    </div>
+
+    <script>
+        let currentType = 'all';
+
+        window.onload = function() {
+            if (typeof Bmob === 'undefined') {
+                showToast("SDK 加载失败，请检查网络");
+                return;
+            }
+            fetchList();
+            
+            // ★★ 修改点 2：自动监听输入框，聚焦时滚动到视野中心 ★★
+            document.querySelectorAll('input, textarea').forEach(input => {
+                input.addEventListener('focus', () => {
+                    setTimeout(() => {
+                        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300); // 延时等待键盘弹出
+                });
+            });
+            
+            // 监听窗口大小变化（处理安卓键盘顶起问题）
+            window.addEventListener('resize', () => {
+                const activeEl = document.activeElement;
+                if(activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+                    activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        }
+
+        // 获取列表
+        function fetchList() {
+            const query = Bmob.Query("Lost");
+            if(currentType !== 'all') {
+                query.equalTo("type", "==", currentType);
+            }
+            query.order("-createdAt");
+            query.include("author");
+            
+            query.find().then(res => {
+                const box = document.getElementById('listContainer');
+                box.innerHTML = "";
+                
+                if(res.length === 0) {
+                    box.innerHTML = `<div style="text-align:center; padding:50px; color:#ccc;">暂无${currentType === 'all' ? '' : currentType}信息</div>`;
+                    return;
+                }
+
+                res.forEach(item => {
+                    const authorName = (item.author && item.author.nickname) ? item.author.nickname : "匿名同学";
+                    const timeStr = item.createdAt.split(" ")[0];
+                    const tagClass = item.type === "寻物" ? "lost" : "found";
+                    
+                    const itemData = encodeURIComponent(JSON.stringify(item));
+
+                    const html = `
+                    <div class="card" onclick="showDetail('${itemData}')">
+                        <div class="card-header">
+                            <span class="tag ${tagClass}">${item.type}</span>
+                            <span class="time">${timeStr}</span>
+                        </div>
+                        <div class="card-title">${item.title}</div>
+                        <div class="card-desc">${item.content}</div>
+                        <div class="card-footer">
+                            <div class="author-info"><i class="fas fa-user-circle"></i> ${authorName}</div>
+                            <div style="color:#999">点击查看详情 <i class="fas fa-chevron-right" style="font-size:10px"></i></div>
+                        </div>
+                    </div>`;
+                    box.innerHTML += html;
+                });
+            }).catch(err => {
+                console.log(err);
+                document.getElementById('listContainer').innerHTML = `<div style="text-align:center;padding:50px;color:red">加载失败: ${err.error || '请检查网络'}</div>`;
+            });
+        }
+
+        // 切换 Tab
+        function switchTab(type, el) {
+            currentType = type;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            fetchList();
+        }
+
+        // 详情页逻辑
+        function showDetail(dataStr) {
+            const item = JSON.parse(decodeURIComponent(dataStr));
+            const tagClass = item.type === "寻物" ? "#FF9F43" : "#2ECC71";
+            const user = Bmob.User.current();
+
+            const html = `
+                <div>
+                    <span class="d-tag" style="background:${tagClass}">${item.type}</span>
+                </div>
+                <div class="d-title">${item.title}</div>
+                <div class="d-desc">${item.content}</div>
+                
+                <div class="contact-row">
+                    <div>
+                        <div class="c-label">联系方式</div>
+                        <div class="c-val" id="copyVal">${item.contact}</div>
+                    </div>
+                    <div class="btn-copy" onclick="copyContact()">复制</div>
+                </div>
+                <div style="font-size:12px; color:#ccc; margin-top:15px; text-align:center;">发布于 ${item.createdAt}</div>
+            `;
+            document.getElementById('detailContent').innerHTML = html;
+
+            const delArea = document.getElementById('deleteBtnArea');
+            delArea.innerHTML = ""; 
+
+            if (user && item.author && user.objectId === item.author.objectId) {
+                delArea.innerHTML = `<button class="btn-delete" onclick="deleteLostItem('${item.objectId}')">删除此条信息</button>`;
+            }
+
+            openSheet('detailSheet');
+        }
+
+        // 删除功能
+        function deleteLostItem(id) {
+            if(!confirm("确定要删除这条信息吗？删除后不可恢复。")) return;
+
+            const query = Bmob.Query("Lost");
+            query.destroy(id).then(res => {
+                showToast("删除成功");
+                closeAll();
+                fetchList(); 
+            }).catch(err => {
+                showToast("删除失败: " + err.message);
+            });
+        }
+
+        // 发布逻辑
+        function openPost() {
+            if(!Bmob.User.current()) {
+                if(confirm("发布信息需要先登录，去登录？")) location.href = "login.html";
+                return;
+            }
+            openSheet('postSheet');
+        }
+
+        async function submitPost() {
+            const user = Bmob.User.current();
+            const title = document.getElementById('p_title').value.trim();
+            const content = document.getElementById('p_content').value.trim();
+            const contact = document.getElementById('p_contact').value.trim();
+            const type = document.querySelector('input[name="p_type"]:checked').value;
+            const btn = document.getElementById('btnPub');
+
+            if(!title || !content || !contact) return showToast("请填写完整信息");
+            
+            if(typeof checkSensitive === 'function') {
+                if(checkSensitive(title) || checkSensitive(content)) return showToast("包含违禁词，请文明用语");
+            }
+
+            btn.innerText = "处理中...";
+            btn.disabled = true;
+
+            try {
+                // 1. 获取最新用户信息 (发布限制)
+                const freshUser = await Bmob.Query("_User").get(user.objectId);
+                const todayStr = new Date().toISOString().split('T')[0]; 
+                
+                let dayCount = 0;
+                if (freshUser.lastLostPubDate === todayStr) {
+                    dayCount = freshUser.lostPubCount || 0;
+                }
+
+                // 2. 判断是否超限
+                if (dayCount >= 2) {
+                    showToast("今日发布次数已达上限 (2次)");
+                    btn.innerText = "确认发布";
+                    btn.disabled = false;
+                    return; 
+                }
+
+                // 3. 执行发布
+                const query = Bmob.Query("Lost");
+                query.set("title", title);
+                query.set("content", content);
+                query.set("contact", contact);
+                query.set("type", type);
+                
+                const userPtr = Bmob.Pointer("_User");
+                const ptr = userPtr.set(user.objectId);
+                query.set("author", ptr);
+
+                await query.save();
+
+                // 4. 更新计数
+                const uUpdate = Bmob.Query("_User");
+                uUpdate.set('id', user.objectId);
+                uUpdate.set('lastLostPubDate', todayStr);
+                uUpdate.set('lostPubCount', dayCount + 1);
+                uUpdate.save(); 
+
+                showToast("发布成功！");
+                closeAll();
+                document.getElementById('p_title').value = "";
+                document.getElementById('p_content').value = "";
+                document.getElementById('p_contact').value = "";
+                fetchList();
+
+            } catch (err) {
+                console.log(err);
+                showToast("发布失败: " + err.message);
+            } finally {
+                btn.innerText = "确认发布";
+                btn.disabled = false;
+            }
+        }
+
+        // 辅助功能
+        function openSheet(id) {
+            document.getElementById('overlay').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('overlay').classList.add('show');
+                document.getElementById(id).classList.add('show');
+            }, 10);
+        }
+
+        function closeAll() {
+            document.querySelectorAll('.bottom-sheet').forEach(el => el.classList.remove('show'));
+            document.getElementById('overlay').classList.remove('show');
+            setTimeout(() => {
+                document.getElementById('overlay').style.display = 'none';
+            }, 300);
+        }
+
+        function copyContact() {
+            const val = document.getElementById('copyVal').innerText;
+            navigator.clipboard.writeText(val).then(() => {
+                showToast("已复制联系方式");
+            });
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2000);
+        }
+    </script>
+</body>
+</html>
